@@ -61,12 +61,30 @@ public final class SQLiteDatabase {
 
     /// Opens the database. Pass `readOnly: true` for browsing to avoid any
     /// risk of mutating the catalog.
+    ///
+    /// For read-only access we open with SQLite's `immutable` URI flag. This
+    /// tells SQLite the file will not change while open, so it performs no
+    /// locking and never attempts to create a journal/WAL/-shm side file —
+    /// which otherwise yields "attempt to write a readonly database" errors on
+    /// some platforms even for pure SELECTs.
     public init(path: String, readOnly: Bool = true) throws {
         self.path = path
-        let flags = readOnly
-            ? SQLITE_OPEN_READONLY
-            : (SQLITE_OPEN_READWRITE)
-        if sqlite3_open_v2(path, &handle, flags, nil) != SQLITE_OK {
+        var rc: Int32
+        if readOnly {
+            let encoded = path.addingPercentEncoding(
+                withAllowedCharacters: .urlPathAllowed) ?? path
+            let uri = "file:\(encoded)?immutable=1"
+            rc = sqlite3_open_v2(uri, &handle,
+                                 SQLITE_OPEN_READONLY | SQLITE_OPEN_URI, nil)
+            if rc != SQLITE_OK {
+                // Fall back to a plain read-only open.
+                sqlite3_close(handle); handle = nil
+                rc = sqlite3_open_v2(path, &handle, SQLITE_OPEN_READONLY, nil)
+            }
+        } else {
+            rc = sqlite3_open_v2(path, &handle, SQLITE_OPEN_READWRITE, nil)
+        }
+        if rc != SQLITE_OK {
             let msg = String(cString: sqlite3_errmsg(handle))
             sqlite3_close(handle)
             throw DBError.openFailed(msg)
