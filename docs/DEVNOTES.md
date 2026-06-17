@@ -105,6 +105,8 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
 - **2026-06-17** Phase 1: stacks reading (`RKStackContent`/`RKStackState`).
 - **2026-06-17** Phase 3 groundwork: read adjustments (type/enabled/order +
   best-effort numeric params); shown in the inspector. Rendering still TODO.
+- **2026-06-17** Added `LibraryStatistics` (counts + rating histogram) + CLI
+  stats output. Suite at 37 tests.
 
 ### Next up (good, safely-testable steps)
 1. Decode real adjustment parameters (`NSKeyedUnarchiver` of Aperture classes),
