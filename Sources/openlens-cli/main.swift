@@ -54,15 +54,21 @@ do {
 
     print("\nPhotos (\(photos.count)):")
     if args.contains("--list") {
+        let showMeta = args.contains("--meta")
         for photo in photos {
             let v = photo.version
             let stars = v.rating > 0 ? String(repeating: "★", count: v.rating) : "—"
             let flag = v.isFlagged ? " ⚑" : ""
             let adj = v.hasAdjustments ? " [edited]" : ""
             print("  \(v.name.padding(toLength: 14, withPad: " ", startingAt: 0)) \(stars)\(flag)\(adj)  \(photo.master.fileName)")
+            if showMeta, let m = library.metadata(for: photo) {
+                let cam = [m.cameraMake, m.cameraModel].compactMap { $0 }.joined(separator: " ")
+                let thumb = library.thumbnailURL(for: photo) != nil ? "thumb✓" : "thumb✗"
+                print("      \(cam.isEmpty ? "—" : cam)  \(m.exposureSummary)  \(thumb)")
+            }
         }
     } else {
-        print("  (pass --list to see them all)")
+        print("  (pass --list to see them all, add --meta for EXIF)")
     }
 } catch {
     fail("Error: \(error)")
