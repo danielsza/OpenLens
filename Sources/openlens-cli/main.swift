@@ -81,6 +81,8 @@ do {
     }
     let vocab = (try? library.keywordVocabulary()) ?? []
     print("\nKeyword vocabulary: \(vocab.count) terms")
+    let stacks = (try? library.stacks()) ?? []
+    if !stacks.isEmpty { print("Stacks: \(stacks.count)") }
 
     print("\nPhotos (\(photos.count)):")
     if args.contains("--list") {

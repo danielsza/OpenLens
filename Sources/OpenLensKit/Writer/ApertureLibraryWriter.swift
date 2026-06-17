@@ -86,6 +86,93 @@ public final class ApertureLibraryWriter {
                           iptcStarRating: nil)
     }
 
+    // MARK: - Keywords
+
+    /// Assigns a keyword (by name) to a version, creating the keyword in the
+    /// vocabulary if it doesn't exist. No-op if already assigned.
+    ///
+    /// NOTE: keywords are written to the catalog (`RKKeyword` /
+    /// `RKKeywordForVersion` / `RKVersion.hasKeywords`), which is what OpenLens
+    /// reads. Mirroring into the `.apversion` plist is tracked on the roadmap.
+    public func addKeyword(_ name: String, toVersion uuid: String) throws {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+
+        let versionId = try versionModelId(uuid, db)
+        let keywordId = try findOrCreateKeyword(trimmed, db)
+
+        let existing = try db.query(
+            "SELECT 1 FROM RKKeywordForVersion WHERE versionId = ? AND keywordId = ?",
+            [.integer(Int64(versionId)), .integer(Int64(keywordId))])
+        if existing.isEmpty {
+            let mid = try nextModelId("RKKeywordForVersion", db)
+            try db.execute(
+                "INSERT INTO RKKeywordForVersion (modelId, versionId, keywordId) VALUES (?, ?, ?)",
+                [.integer(Int64(mid)), .integer(Int64(versionId)), .integer(Int64(keywordId))])
+        }
+        try db.execute("UPDATE RKVersion SET hasKeywords = 1 WHERE uuid = ?", [.text(uuid)])
+    }
+
+    /// Removes a keyword (by name) from a version. No-op if not assigned.
+    public func removeKeyword(_ name: String, fromVersion uuid: String) throws {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+        let versionId = try versionModelId(uuid, db)
+        let kw = try db.query(
+            "SELECT modelId FROM RKKeyword WHERE searchName = ?",
+            [.text(name.lowercased())])
+        guard let keywordId = kw.first?["modelId"]?.intValue else { return }
+        try db.execute(
+            "DELETE FROM RKKeywordForVersion WHERE versionId = ? AND keywordId = ?",
+            [.integer(Int64(versionId)), .integer(Int64(keywordId))])
+        let remaining = try db.query(
+            "SELECT 1 FROM RKKeywordForVersion WHERE versionId = ?",
+            [.integer(Int64(versionId))])
+        try db.execute("UPDATE RKVersion SET hasKeywords = ? WHERE uuid = ?",
+                       [.integer(remaining.isEmpty ? 0 : 1), .text(uuid)])
+    }
+
+    /// Replaces a version's keywords with exactly `names`.
+    public func setKeywords(_ names: [String], forVersion uuid: String) throws {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+        let versionId = try versionModelId(uuid, db)
+        try db.execute("DELETE FROM RKKeywordForVersion WHERE versionId = ?",
+                       [.integer(Int64(versionId))])
+        try db.execute("UPDATE RKVersion SET hasKeywords = 0 WHERE uuid = ?", [.text(uuid)])
+        for name in names { try addKeyword(name, toVersion: uuid) }
+    }
+
+    // MARK: - Keyword helpers
+
+    private func versionModelId(_ uuid: String, _ db: SQLiteDatabase) throws -> Int {
+        let rows = try db.query("SELECT modelId FROM RKVersion WHERE uuid = ?", [.text(uuid)])
+        guard let id = rows.first?["modelId"]?.intValue else {
+            throw WriteError.versionNotFound(uuid)
+        }
+        return id
+    }
+
+    private func nextModelId(_ table: String, _ db: SQLiteDatabase) throws -> Int {
+        let rows = try db.query("SELECT COALESCE(MAX(modelId), 0) + 1 AS next FROM \(table)")
+        return rows.first?["next"]?.intValue ?? 1
+    }
+
+    private func findOrCreateKeyword(_ name: String, _ db: SQLiteDatabase) throws -> Int {
+        let found = try db.query(
+            "SELECT modelId FROM RKKeyword WHERE searchName = ?", [.text(name.lowercased())])
+        if let id = found.first?["modelId"]?.intValue { return id }
+        let mid = try nextModelId("RKKeyword", db)
+        try db.execute("""
+            INSERT INTO RKKeyword (modelId, uuid, name, searchName, parentId, hasChildren, shortcut)
+            VALUES (?, ?, ?, ?, NULL, 0, NULL)
+            """, [.integer(Int64(mid)), .text(UUID().uuidString),
+                  .text(name), .text(name.lowercased())])
+        return mid
+    }
+
     // MARK: - Core update
 
     private func updateVersion(uuid: String,

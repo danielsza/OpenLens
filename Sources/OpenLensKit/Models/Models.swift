@@ -63,6 +63,9 @@ public struct PhotoVersion: Identifiable, Hashable {
     public let imageDate: Date?
     public let masterWidth: Int?
     public let masterHeight: Int?
+
+    /// The stack this version belongs to, if any (`RKVersion.stackUuid`).
+    public var stackUuid: String?
 }
 
 /// Combined view used by the UI: a version plus its resolved master.
@@ -101,6 +104,15 @@ public struct Album: Identifiable, Hashable {
     public var isSystem: Bool {
         albumSubclass == 1 || isMagic || Album.systemNames.contains(name ?? "")
     }
+}
+
+/// A stack: a group of versions Aperture displays collapsed under one "pick".
+/// Membership is in `RKStackContent`; the pick/state is in `RKStackState`.
+public struct Stack: Identifiable, Hashable {
+    public let id: String                 // stackUuid
+    public let versionUuids: [String]     // ordered members
+    public let pickVersionUuid: String?   // the version shown when collapsed
+    public var count: Int { versionUuids.count }
 }
 
 /// A keyword in the (hierarchical) keyword vocabulary (`RKKeyword`).
