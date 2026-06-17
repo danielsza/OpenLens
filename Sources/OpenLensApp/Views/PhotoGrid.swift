@@ -9,18 +9,46 @@ struct PhotoGrid: View {
     private let columns = [GridItem(.adaptive(minimum: 140), spacing: 12)]
 
     var body: some View {
-        ScrollView {
-            LazyVGrid(columns: columns, spacing: 12) {
-                ForEach(store.visiblePhotos) { photo in
-                    Thumbnail(photo: photo,
-                              library: store.library,
-                              isSelected: photo.id == store.selectedPhotoID)
-                        .onTapGesture { store.selectedPhotoID = photo.id }
+        VStack(spacing: 0) {
+            filterBar
+            Divider()
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(store.visiblePhotos) { photo in
+                        Thumbnail(photo: photo,
+                                  library: store.library,
+                                  isSelected: photo.id == store.selectedPhotoID)
+                            .onTapGesture { store.selectedPhotoID = photo.id }
+                    }
                 }
+                .padding(12)
             }
-            .padding(12)
         }
         .navigationTitle(currentProjectName)
+    }
+
+    private var filterBar: some View {
+        HStack(spacing: 12) {
+            Picker("Rating", selection: $store.filter.minRating) {
+                Text("All").tag(0)
+                ForEach(1...5, id: \.self) { Text("\($0)★+").tag($0) }
+            }
+            .pickerStyle(.menu)
+            .frame(width: 110)
+
+            Toggle("Flagged", isOn: $store.filter.flaggedOnly)
+                .toggleStyle(.button)
+
+            Toggle("Edited", isOn: $store.filter.adjustedOnly)
+                .toggleStyle(.button)
+
+            Spacer()
+            Text("\(store.visiblePhotos.count) photos")
+                .foregroundStyle(.secondary)
+                .font(.caption)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
     }
 
     private var currentProjectName: String {

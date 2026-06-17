@@ -9,11 +9,15 @@ who organised their whole catalog around its projects + non-destructive
 versions model. OpenLens is an attempt to bring that workflow back on modern
 macOS, working directly with the libraries you already have.
 
-> **Status: early scaffold.** Read-only browsing of the catalog works, and a
-> guarded writer can set ratings/flags/labels. Everything is built on a
+> **Status: working core (Phase 1 complete).** Browsing of projects, albums,
+> photos, thumbnails (RAW-aware via ImageIO), EXIF/IPTC metadata and keywords
+> all work; a filter bar and export (originals + rendered JPEG) are in; and a
+> guarded, tested writer sets ratings/flags/labels — keeping the SQLite catalog
+> and the per-image `.apversion` plist in sync. Everything is built on a
 > documented, reverse-engineered understanding of the format
-> (see [`docs/aperture-format.md`](docs/aperture-format.md)). Treat your real
-> libraries as precious and **work on copies** until writing is fully proven.
+> (see [`docs/aperture-format.md`](docs/aperture-format.md)) and covered by a CI
+> test suite that runs against a synthetic fixture. Treat your real libraries as
+> precious and **work on copies** until writing is battle-tested.
 
 ## Goals (feature parity with Aperture)
 

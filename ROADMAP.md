@@ -14,17 +14,21 @@ first, writes only when proven, always reversible.
 - [x] Unit tests against a real library.
 
 ## Phase 1 — Solid browsing
-- [ ] Load rendered **previews/thumbnails** from `Previews/`+`Thumbnails/`
-      (via `imageProxyState`) instead of decoding full masters.
-- [ ] RAW + wide-gamut decode via **ImageIO / Core Image**.
-- [ ] Correct orientation/rotation handling.
-- [ ] Albums and smart albums (`RKAlbum`), not just projects.
-- [ ] Keywords display (`RKKeyword` / `RKKeywordForVersion`).
+- [x] Load rendered **thumbnails** from `Thumbnails/` (via `imageProxyState`)
+      instead of decoding full masters.
+- [x] RAW + wide-gamut decode via **ImageIO** (with orientation applied).
+- [x] Correct orientation/rotation handling (ImageIO transform).
+- [x] Albums and smart albums (`RKAlbum`), not just projects.
+- [x] Keywords display (`RKKeyword` / `RKKeywordForVersion`).
+- [x] Filter bar (rating / flagged / edited) — `PhotoFilter`.
+- [x] Basic export (originals + rendered JPEG) — `Exporter`.
 - [ ] Stacks (`RKStackState` / `RKStackContent`).
-- [ ] Fast scrolling for large libraries (lazy loading, image cache).
+- [ ] Full-size `Previews/` rendering and an image cache for fast scrolling.
 
 ## Phase 2 — Metadata editing (safe writes)
-- [ ] Hardened rating/flag/label writes with automatic library backup.
+- [x] Rating/flag/label writes that keep SQLite + the `.apversion` plist in
+      sync (`ApertureLibraryWriter`), with write tests on a throwaway copy.
+- [x] One-shot catalog backup safeguard (`backupCatalog()`).
 - [ ] Keyword add/remove.
 - [ ] Update `Properties.apdb` search index and append `History` entries so
       edits are consistent with Aperture's own bookkeeping.

@@ -137,3 +137,15 @@ reference date), *not* the Unix epoch. Convert with
   `RKVolume`. Resolving these is on the roadmap.
 - Adjustments are stored as a parameter list, not baked pixels — matching them
   exactly is the hardest part of full parity (see ROADMAP).
+- **Open read-only catalogs with SQLite's `immutable=1` URI.** A plain
+  read-only `SELECT` can otherwise fail with *"attempt to write a readonly
+  database"* on some platforms. `immutable` also makes SQLite ignore any
+  side-files.
+- **Never let a stray `-journal`/`-wal`/`-shm` travel with a catalog.** If a hot
+  journal is present, a read-**write** open will run rollback recovery and can
+  empty the database ("no such table"). OpenLens gitignores these and the
+  reader opens `immutable` (which ignores them).
+- Thumbnails live under `Thumbnails/<date>/<uuid>/thumb_<name>_1024.jpg` (plus a
+  `mini` size and per-face tiles). The paths are recorded in the
+  `imageProxyState` of `Version-1.apversion`. A library may have **no**
+  `Previews/` if full-size previews were never generated.

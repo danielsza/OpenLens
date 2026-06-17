@@ -21,10 +21,14 @@ final class LibraryStore: ObservableObject {
     /// Default off — browsing is non-destructive until the user opts in.
     @Published var writesEnabled = false
 
+    @Published var filter = PhotoFilter()
+
     var visiblePhotos: [Photo] {
-        if let aid = selectedAlbumID { return albumPhotos[aid] ?? [] }
-        guard let pid = selectedProjectID else { return photos }
-        return photos.filter { $0.version.projectUuid == pid }
+        let base: [Photo]
+        if let aid = selectedAlbumID { base = albumPhotos[aid] ?? [] }
+        else if let pid = selectedProjectID { base = photos.filter { $0.version.projectUuid == pid } }
+        else { base = photos }
+        return filter.apply(to: base)
     }
 
     func selectProject(_ id: String?) {
