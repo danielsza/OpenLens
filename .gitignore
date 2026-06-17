@@ -13,9 +13,12 @@ xcuserdata/
 # macOS
 .DS_Store
 
-# Never commit photo libraries or any sample data
+# Never commit photo libraries or any sample data...
 *.aplibrary/
 *.aplibrary
+# ...except the synthetic test fixture (generated, contains no personal photos)
+!/Tests/Fixtures/Mini.aplibrary
+!/Tests/Fixtures/Mini.aplibrary/**
 
 # Never commit secrets / credentials
 *.pem

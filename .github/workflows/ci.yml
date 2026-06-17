@@ -15,6 +15,8 @@ jobs:
       - name: Build
         run: swift build -v
       - name: Test
-        # Tests that need a real library are skipped automatically when
-        # OPENLENS_TEST_LIBRARY is unset, so this stays green in CI.
+        # Run the reader tests against the committed synthetic fixture (no
+        # personal photos) so CI exercises the real read paths.
+        env:
+          OPENLENS_TEST_LIBRARY: ${{ github.workspace }}/Tests/Fixtures/Mini.aplibrary
         run: swift test -v
