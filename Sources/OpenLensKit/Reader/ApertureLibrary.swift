@@ -120,7 +120,8 @@ public final class ApertureLibrary {
             SELECT modelId, uuid, name, fileName, versionNumber, masterUuid,
                    projectUuid, mainRating, isFlagged, colorLabelIndex,
                    hasAdjustments, isOriginal, rotation, isInTrash,
-                   showInLibrary, imageDate, masterWidth, masterHeight, stackUuid
+                   showInLibrary, imageDate, masterWidth, masterHeight, stackUuid,
+                   hasKeywords
             FROM RKVersion
             WHERE (isInTrash = 0 OR isInTrash IS NULL)
             """
@@ -202,7 +203,8 @@ public final class ApertureLibrary {
             imageDate: appleDate(row["imageDate"]?.doubleValue),
             masterWidth: row["masterWidth"]?.intValue,
             masterHeight: row["masterHeight"]?.intValue,
-            stackUuid: row["stackUuid"]?.stringValue
+            stackUuid: row["stackUuid"]?.stringValue,
+            hasKeywords: (row["hasKeywords"]?.intValue ?? 0) == 1
         )
     }
 

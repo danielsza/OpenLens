@@ -66,6 +66,9 @@ public struct PhotoVersion: Identifiable, Hashable {
 
     /// The stack this version belongs to, if any (`RKVersion.stackUuid`).
     public var stackUuid: String?
+
+    /// Whether the version has any keywords assigned (`RKVersion.hasKeywords`).
+    public var hasKeywords: Bool = false
 }
 
 /// Combined view used by the UI: a version plus its resolved master.
