@@ -30,6 +30,22 @@ public enum ImageLoader {
         return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
     }
 
+    /// Full-resolution decode (orientation applied). Use for export; prefer
+    /// `cgImage(at:maxPixelSize:)` for on-screen thumbnails.
+    public static func fullCGImage(at url: URL) -> CGImage? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            // A very large cap effectively means "full size" while still
+            // applying the orientation transform.
+            kCGImageSourceThumbnailMaxPixelSize: 1_000_000
+        ]
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+            ?? CGImageSourceCreateImageAtIndex(source, 0, nil)
+    }
+
     /// Pixel dimensions of an image without decoding it.
     public static func pixelSize(at url: URL) -> CGSize? {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),

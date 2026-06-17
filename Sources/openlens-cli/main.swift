@@ -35,6 +35,25 @@ do {
     let projects = try library.projects()
     let photos = try library.photos()
 
+    if args.contains("--export"), let i = args.firstIndex(of: "--export") {
+        guard i + 1 < args.count else { fail("--export requires a destination directory") }
+        let dest = URL(fileURLWithPath: args[i + 1])
+        let exporter = Exporter(library: library)
+        let mode: Exporter.Mode
+        if args.contains("--rendered") {
+            let size = args.firstIndex(of: "--size").flatMap { args.indices.contains($0+1) ? Int(args[$0+1]) : nil } ?? 2048
+            mode = .rendered(maxPixelSize: size, quality: 0.9)
+        } else {
+            mode = .originals
+        }
+        let result = exporter.exportBatch(photos, to: dest, mode: mode)
+        print("Exported \(result.written.count) file(s) to \(dest.path)")
+        for (photo, error) in result.failures {
+            print("  ⚠️  \(photo.version.name): \(error)")
+        }
+        exit(result.failures.isEmpty ? 0 : 1)
+    }
+
     if args.contains("--rate"), let i = args.firstIndex(of: "--rate") {
         guard i + 2 < args.count, let stars = Int(args[i + 2]) else {
             fail("--rate requires <versionUuid> <0-5>")
