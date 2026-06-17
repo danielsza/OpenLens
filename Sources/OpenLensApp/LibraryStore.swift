@@ -7,18 +7,34 @@ import OpenLensKit
 final class LibraryStore: ObservableObject {
     @Published var library: ApertureLibrary?
     @Published var projects: [Project] = []
+    @Published var userAlbums: [Album] = []
     @Published var photos: [Photo] = []
     @Published var selectedProjectID: String?
+    @Published var selectedAlbumID: String?
     @Published var selectedPhotoID: String?
     @Published var errorMessage: String?
+
+    /// Precomputed album membership (album uuid -> photos).
+    private var albumPhotos: [String: [Photo]] = [:]
 
     /// When true, rating edits are written back to the library on disk.
     /// Default off — browsing is non-destructive until the user opts in.
     @Published var writesEnabled = false
 
     var visiblePhotos: [Photo] {
+        if let aid = selectedAlbumID { return albumPhotos[aid] ?? [] }
         guard let pid = selectedProjectID else { return photos }
         return photos.filter { $0.version.projectUuid == pid }
+    }
+
+    func selectProject(_ id: String?) {
+        selectedAlbumID = nil
+        selectedProjectID = id
+    }
+
+    func selectAlbum(_ id: String?) {
+        selectedProjectID = nil
+        selectedAlbumID = id
     }
 
     var selectedPhoto: Photo? {
@@ -31,7 +47,14 @@ final class LibraryStore: ObservableObject {
             self.library = lib
             self.projects = try lib.projects()
             self.photos = try lib.photos()
+            self.userAlbums = (try? lib.userAlbums()) ?? []
+            var map: [String: [Photo]] = [:]
+            for album in userAlbums {
+                map[album.id] = (try? lib.photos(inAlbum: album)) ?? []
+            }
+            self.albumPhotos = map
             self.selectedProjectID = projects.first?.id
+            self.selectedAlbumID = nil
             self.errorMessage = nil
         } catch {
             self.errorMessage = "\(error)"

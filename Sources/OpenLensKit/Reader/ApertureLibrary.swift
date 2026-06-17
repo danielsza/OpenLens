@@ -42,7 +42,7 @@ public final class ApertureLibrary {
     public let url: URL
     public let version: String
 
-    private let libraryDB: SQLiteDatabase
+    let libraryDB: SQLiteDatabase
 
     public var databaseURL: URL {
         url.appendingPathComponent("Database/apdb/Library.apdb")

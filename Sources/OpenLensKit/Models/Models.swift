@@ -77,6 +77,41 @@ public struct Photo: Identifiable, Hashable {
     }
 }
 
+/// An album (regular or smart). Aperture stores these in `RKAlbum`; membership
+/// for regular albums is in `RKAlbumVersion` (which links by `modelId`).
+public struct Album: Identifiable, Hashable {
+    public let id: String          // uuid
+    public let modelId: Int
+    public let name: String?
+    public let albumType: Int
+    public let albumSubclass: Int  // 1 = implicit (project/library), 2 = smart, 3 = regular/import
+    public let folderUuid: String?
+    public let isMagic: Bool
+    public let isInTrash: Bool
+
+    public var displayName: String { name ?? "Untitled Album" }
+
+    /// Internal/smart albums Aperture maintains automatically.
+    static let systemNames: Set<String> = [
+        "trashAlbum", "allPhotosAlbum", "flaggedAlbum", "rejectedAlbum",
+        "lastNMonthsAlbum", "eventFilterBarAlbum", "allPlacedPhotosAlbum"
+    ]
+
+    /// True for implicit/smart/automatic albums rather than ones the user made.
+    public var isSystem: Bool {
+        albumSubclass == 1 || isMagic || Album.systemNames.contains(name ?? "")
+    }
+}
+
+/// A keyword in the (hierarchical) keyword vocabulary (`RKKeyword`).
+public struct Keyword: Identifiable, Hashable {
+    public let id: String          // uuid
+    public let modelId: Int
+    public let name: String
+    public let parentModelId: Int?
+    public let hasChildren: Bool
+}
+
 /// Colour labels, matching Aperture's `colorLabelIndex` values.
 public enum ColorLabel: Int, CaseIterable {
     case none = -1

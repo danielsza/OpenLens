@@ -52,6 +52,17 @@ do {
         print("  • \(p.name)  [\(count) photos]  uuid=\(p.id)")
     }
 
+    let userAlbums = (try? library.userAlbums()) ?? []
+    if !userAlbums.isEmpty {
+        print("\nAlbums (\(userAlbums.count)):")
+        for a in userAlbums {
+            let count = (try? library.photos(inAlbum: a).count) ?? 0
+            print("  • \(a.displayName)  [\(count) photos]")
+        }
+    }
+    let vocab = (try? library.keywordVocabulary()) ?? []
+    print("\nKeyword vocabulary: \(vocab.count) terms")
+
     print("\nPhotos (\(photos.count)):")
     if args.contains("--list") {
         let showMeta = args.contains("--meta")
