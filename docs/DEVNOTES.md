@@ -106,7 +106,9 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
 - **2026-06-17** Phase 3 groundwork: read adjustments (type/enabled/order +
   best-effort numeric params); shown in the inspector. Rendering still TODO.
 - **2026-06-17** Added `LibraryStatistics` (counts + rating histogram) + CLI
-  stats output. Suite at 37 tests.
+  stats output.
+- **2026-06-17** Added free-text `search()` across name + keywords + camera/lens
+  (AND semantics). Suite at 41 tests.
 
 ### Next up (good, safely-testable steps)
 1. Decode real adjustment parameters (`NSKeyedUnarchiver` of Aperture classes),
