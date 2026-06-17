@@ -86,6 +86,25 @@ public final class ApertureLibraryWriter {
                           iptcStarRating: nil)
     }
 
+    // MARK: - Trash (reversible)
+
+    /// Moves a version to the trash (sets `isInTrash`). Reversible with
+    /// `restoreFromTrash`. Does not delete any files.
+    public func moveToTrash(versionUuid uuid: String) throws {
+        try updateVersion(uuid: uuid,
+                          columns: ["isInTrash": .integer(1)],
+                          plistKeys: ["isInTrash": true],
+                          iptcStarRating: nil)
+    }
+
+    /// Restores a version from the trash.
+    public func restoreFromTrash(versionUuid uuid: String) throws {
+        try updateVersion(uuid: uuid,
+                          columns: ["isInTrash": .integer(0)],
+                          plistKeys: ["isInTrash": false],
+                          iptcStarRating: nil)
+    }
+
     // MARK: - Keywords
 
     /// Assigns a keyword (by name) to a version, creating the keyword in the
