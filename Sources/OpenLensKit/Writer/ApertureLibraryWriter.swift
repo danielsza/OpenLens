@@ -45,6 +45,21 @@ public final class ApertureLibraryWriter {
         libraryURL.appendingPathComponent("Database/apdb/Library.apdb").path
     }
 
+    /// Makes a timestamped copy of the catalog before mutating it. Call once
+    /// before a batch of edits. Returns the backup URL.
+    @discardableResult
+    public func backupCatalog() throws -> URL {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let fm = FileManager.default
+        let stamp = ISO8601DateFormatter().string(from: Date())
+            .replacingOccurrences(of: ":", with: "-")
+        let backupDir = libraryURL.appendingPathComponent("OpenLensBackups", isDirectory: true)
+        try fm.createDirectory(at: backupDir, withIntermediateDirectories: true)
+        let dst = backupDir.appendingPathComponent("Library-\(stamp).apdb")
+        try fm.copyItem(at: URL(fileURLWithPath: dbPath), to: dst)
+        return dst
+    }
+
     // MARK: - Public API
 
     /// Sets the star rating (0...5) for a version.
