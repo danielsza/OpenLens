@@ -42,6 +42,10 @@ struct PhotoGrid: View {
             Toggle("Edited", isOn: $store.filter.adjustedOnly)
                 .toggleStyle(.button)
 
+            TextField("Filter by name", text: $store.filter.nameContains)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 160)
+
             Spacer()
             Text("\(store.visiblePhotos.count) photos")
                 .foregroundStyle(.secondary)

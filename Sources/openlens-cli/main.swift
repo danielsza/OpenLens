@@ -35,6 +35,17 @@ do {
     let projects = try library.projects()
     let photos = try library.photos()
 
+    if args.contains("--search"), let i = args.firstIndex(of: "--search") {
+        guard i + 1 < args.count else { fail("--search requires a query") }
+        let hits = try library.search(args[i + 1])
+        print("Search \"\(args[i + 1])\" — \(hits.count) result(s):")
+        for p in hits {
+            let stars = p.version.rating > 0 ? String(repeating: "★", count: p.version.rating) : "—"
+            print("  \(p.version.name)  \(stars)  \(p.master.fileName)")
+        }
+        exit(0)
+    }
+
     if args.contains("--export"), let i = args.firstIndex(of: "--export") {
         guard i + 1 < args.count else { fail("--export requires a destination directory") }
         let dest = URL(fileURLWithPath: args[i + 1])
