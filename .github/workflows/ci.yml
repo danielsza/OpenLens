@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show Swift version
+        run: swift --version
+      - name: Build
+        run: swift build -v
+      - name: Test
+        # Tests that need a real library are skipped automatically when
+        # OPENLENS_TEST_LIBRARY is unset, so this stays green in CI.
+        run: swift test -v

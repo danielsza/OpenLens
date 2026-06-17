@@ -1,0 +1,27 @@
+# Swift / SwiftPM
+.build/
+.swiftpm/
+Package.resolved
+
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+
+# macOS
+.DS_Store
+
+# Never commit photo libraries or any sample data
+*.aplibrary/
+*.aplibrary
+
+# Never commit secrets / credentials
+*.pem
+*_key
+*_key.pub
+id_*
+*.token
+.env
+secrets*
