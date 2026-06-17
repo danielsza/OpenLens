@@ -114,6 +114,14 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
 - **2026-06-17** Trash: reversible `moveToTrash`/`restoreFromTrash` (DB + plist)
   and `trashedPhotos()` reader. Permanent delete intentionally not implemented
   yet. Suite at 45.
+- **2026-06-17** Added in-app name filter field and CLI `--search`.
+
+### Current state (end of 2026-06-17 session)
+- 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
+- The whole testable surface of the reader + safe writes is covered.
+- **Needs human-in-the-loop next:** adjustment *rendering* (decode the
+  `NSKeyedArchiver` parameter blobs → Core Image) and UI polish — both need
+  visual review, so they're best done with Daniel watching the app.
 
 ### Next up (good, safely-testable steps)
 1. Decode real adjustment parameters (`NSKeyedUnarchiver` of Aperture classes),
