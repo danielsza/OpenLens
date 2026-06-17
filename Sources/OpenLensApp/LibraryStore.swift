@@ -7,6 +7,7 @@ import OpenLensKit
 final class LibraryStore: ObservableObject {
     @Published var library: ApertureLibrary?
     @Published var projects: [Project] = []
+    @Published var projectTree: [FolderNode] = []
     @Published var userAlbums: [Album] = []
     @Published var photos: [Photo] = []
     @Published var selectedProjectID: String?
@@ -50,6 +51,7 @@ final class LibraryStore: ObservableObject {
             let lib = try ApertureLibrary(url: url)
             self.library = lib
             self.projects = try lib.projects()
+            self.projectTree = (try? lib.projectNavigator()) ?? []
             self.photos = try lib.photos()
             self.userAlbums = (try? lib.userAlbums()) ?? []
             var map: [String: [Photo]] = [:]

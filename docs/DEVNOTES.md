@@ -108,7 +108,9 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
 - **2026-06-17** Added `LibraryStatistics` (counts + rating histogram) + CLI
   stats output.
 - **2026-06-17** Added free-text `search()` across name + keywords + camera/lens
-  (AND semantics). Suite at 41 tests.
+  (AND semantics).
+- **2026-06-17** Added folder/project tree (`folderHierarchy()` /
+  `projectNavigator()`) and a nested sidebar via `OutlineGroup`. Suite at 43.
 
 ### Next up (good, safely-testable steps)
 1. Decode real adjustment parameters (`NSKeyedUnarchiver` of Aperture classes),

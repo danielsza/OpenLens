@@ -7,12 +7,17 @@ struct ProjectSidebar: View {
     var body: some View {
         List {
             Section("Projects") {
-                ForEach(store.projects) { project in
-                    row(title: project.name.isEmpty ? "Untitled" : project.name,
-                        systemImage: "rectangle.stack",
-                        count: store.photos.filter { $0.version.projectUuid == project.id }.count,
-                        isSelected: store.selectedProjectID == project.id) {
-                        store.selectProject(project.id)
+                if store.projectTree.isEmpty {
+                    ForEach(store.projects) { project in
+                        projectRow(project)
+                    }
+                } else {
+                    OutlineGroup(store.projectTree, children: \.nonEmptyChildren) { node in
+                        if node.isProject {
+                            projectRow(node.folder)
+                        } else {
+                            Label(node.name.isEmpty ? "Folder" : node.name, systemImage: "folder")
+                        }
                     }
                 }
             }
@@ -31,6 +36,16 @@ struct ProjectSidebar: View {
             }
         }
         .listStyle(.sidebar)
+    }
+
+    @ViewBuilder
+    private func projectRow(_ project: Project) -> some View {
+        row(title: project.name.isEmpty ? "Untitled" : project.name,
+            systemImage: "rectangle.stack",
+            count: store.photos.filter { $0.version.projectUuid == project.id }.count,
+            isSelected: store.selectedProjectID == project.id) {
+            store.selectProject(project.id)
+        }
     }
 
     @ViewBuilder
