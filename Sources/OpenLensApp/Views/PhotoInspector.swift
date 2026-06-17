@@ -8,6 +8,7 @@ struct PhotoInspector: View {
     @State private var preview: NSImage?
     @State private var meta: VersionMetadata?
     @State private var keywords: [String] = []
+    @State private var adjustments: [String] = []
 
     var body: some View {
         if let photo = store.selectedPhoto {
@@ -56,6 +57,13 @@ struct PhotoInspector: View {
                         }
                     }
 
+                    if !adjustments.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Adjustments").font(.caption).foregroundStyle(.secondary)
+                            Text(adjustments.joined(separator: ", ")).font(.caption)
+                        }
+                    }
+
                     Divider()
 
                     Button {
@@ -80,6 +88,7 @@ struct PhotoInspector: View {
         guard let library = store.library else { return }
         self.meta = library.metadata(for: photo)
         self.keywords = (try? library.keywords(for: photo)) ?? []
+        self.adjustments = (try? library.enabledAdjustmentNames(for: photo)) ?? []
         let url = library.displayImageURL(for: photo)
         let cg = await Task.detached(priority: .userInitiated) { () -> CGImage? in
             ImageLoader.cgImage(at: url, maxPixelSize: 800)
