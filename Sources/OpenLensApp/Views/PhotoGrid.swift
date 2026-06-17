@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import CoreGraphics
 import OpenLensKit
 
 struct PhotoGrid: View {
@@ -71,14 +72,14 @@ struct Thumbnail: View {
 
     private func loadImage() async {
         guard let library else { return }
-        let url = library.masterFileURL(for: photo.master)
-        // Load bytes off the main actor (Data is Sendable), then build the
-        // NSImage on the main actor — NSImage is not Sendable. For the scaffold
-        // we read the master directly; RAW files and rendered previews/
-        // thumbnails are handled later via ImageIO.
-        let data = await Task.detached(priority: .utility) { () -> Data? in
-            try? Data(contentsOf: url)
+        // Prefer Aperture's cached thumbnail; fall back to the master. ImageIO
+        // decodes RAW + applies orientation, and downsamples for the grid.
+        let url = library.displayImageURL(for: photo)
+        let cg = await Task.detached(priority: .utility) { () -> CGImage? in
+            ImageLoader.cgImage(at: url, maxPixelSize: 320)
         }.value
-        if let data { self.image = NSImage(data: data) }
+        if let cg {
+            self.image = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
+        }
     }
 }

@@ -1,14 +1,24 @@
 import SwiftUI
 import AppKit
+import CoreGraphics
 import OpenLensKit
 
 struct PhotoInspector: View {
     @ObservedObject var store: LibraryStore
+    @State private var preview: NSImage?
+    @State private var meta: VersionMetadata?
 
     var body: some View {
         if let photo = store.selectedPhoto {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    if let preview {
+                        Image(nsImage: preview)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxHeight: 220)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
                     Text(photo.version.name).font(.title3).bold()
 
                     // Rating
@@ -49,10 +59,24 @@ struct PhotoInspector: View {
                 }
                 .padding()
             }
+            .task(id: photo.id) { await load(photo) }
         } else {
             Text("Select a photo")
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private func load(_ photo: Photo) async {
+        preview = nil
+        guard let library = store.library else { return }
+        self.meta = library.metadata(for: photo)
+        let url = library.displayImageURL(for: photo)
+        let cg = await Task.detached(priority: .userInitiated) { () -> CGImage? in
+            ImageLoader.cgImage(at: url, maxPixelSize: 800)
+        }.value
+        if let cg {
+            self.preview = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
         }
     }
 
@@ -69,6 +93,16 @@ struct PhotoInspector: View {
             row("Type", photo.master.type)
             if photo.version.hasAdjustments { row("Edited", "Yes") }
             if photo.master.isReference { row("Referenced", "Yes") }
+
+            if let meta {
+                let camera = [meta.cameraMake, meta.cameraModel].compactMap { $0 }.joined(separator: " ")
+                if !camera.isEmpty { row("Camera", camera) }
+                if let lens = meta.lensModel { row("Lens", lens) }
+                if !meta.exposureSummary.isEmpty { row("Exposure", meta.exposureSummary) }
+                if let copyright = meta.copyright, !copyright.isEmpty {
+                    row("Copyright", copyright)
+                }
+            }
         }
         .font(.caption)
     }
