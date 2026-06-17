@@ -72,11 +72,13 @@ struct Thumbnail: View {
     private func loadImage() async {
         guard let library else { return }
         let url = library.masterFileURL(for: photo.master)
-        let loaded = await Task.detached(priority: .utility) { () -> NSImage? in
-            // For the scaffold we load the master file directly. RAW files and
-            // rendered previews/thumbnails are handled later via ImageIO.
-            NSImage(contentsOf: url)
+        // Load bytes off the main actor (Data is Sendable), then build the
+        // NSImage on the main actor — NSImage is not Sendable. For the scaffold
+        // we read the master directly; RAW files and rendered previews/
+        // thumbnails are handled later via ImageIO.
+        let data = await Task.detached(priority: .utility) { () -> Data? in
+            try? Data(contentsOf: url)
         }.value
-        await MainActor.run { self.image = loaded }
+        if let data { self.image = NSImage(data: data) }
     }
 }

@@ -53,9 +53,9 @@ final class ApertureLibraryTests: XCTestCase {
         }
     }
 
-    func testAppleDateConversion() {
+    func testAppleDateConversion() throws {
         // 2001-01-01 00:00:00 UTC is reference-date 0.
-        let date = ApertureLibrary.appleDate(0)
-        XCTAssertEqual(date?.timeIntervalSince1970, 978307200, accuracy: 1)
+        let date = try XCTUnwrap(ApertureLibrary.appleDate(0))
+        XCTAssertEqual(date.timeIntervalSince1970, 978307200, accuracy: 1)
     }
 }
