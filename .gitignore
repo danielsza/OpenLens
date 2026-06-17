@@ -20,6 +20,12 @@ xcuserdata/
 !/Tests/Fixtures/Mini.aplibrary
 !/Tests/Fixtures/Mini.aplibrary/**
 
+# Never commit SQLite side-files: a stray hot journal makes a read-write open
+# roll the database back to empty. These must never enter the repo.
+*-journal
+*-wal
+*-shm
+
 # Never commit secrets / credentials
 *.pem
 *_key
