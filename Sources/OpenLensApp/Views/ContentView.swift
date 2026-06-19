@@ -6,29 +6,17 @@ struct ContentView: View {
     @StateObject private var store = LibraryStore()
 
     var body: some View {
-        NavigationSplitView {
+        HSplitView {
             ProjectSidebar(store: store)
-                .frame(minWidth: 200)
-        } content: {
-            PhotoGrid(store: store)
-                .frame(minWidth: 360)
-        } detail: {
+                .frame(minWidth: 180, idealWidth: 220, maxWidth: 320)
+            centerColumn
+                .frame(minWidth: 420)
             PhotoInspector(store: store)
-                .frame(minWidth: 260)
+                .frame(minWidth: 270, idealWidth: 300, maxWidth: 380)
         }
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button {
-                    openLibrary()
-                } label: {
-                    Label("Open Library", systemImage: "folder")
-                }
-            }
-            ToolbarItem(placement: .automatic) {
-                Toggle("Save edits", isOn: $store.writesEnabled)
-                    .help("When on, ratings and flags are written back to the library on disk.")
-            }
-        }
+        .background(Theme.appBackground)
+        .preferredColorScheme(.dark)
+        .toolbar { toolbarContent }
         .overlay {
             if store.library == nil {
                 ContentUnavailablePlaceholder(action: openLibrary)
@@ -46,11 +34,89 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Center column
+
+    private var centerColumn: some View {
+        VStack(spacing: 0) {
+            filterBar
+            Divider().overlay(Theme.hairline)
+            content
+            Divider().overlay(Theme.hairline)
+            ControlBar(store: store)
+        }
+        .background(Theme.appBackground)
+        .focusable()
+        .onMoveCommand { direction in
+            switch direction {
+            case .left, .up: store.selectOffset(-1)
+            case .right, .down: store.selectOffset(1)
+            default: break
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch store.viewMode {
+        case .grid:
+            GridBrowser(store: store)
+        case .split:
+            VSplitView {
+                ImageViewer(store: store).frame(minHeight: 200)
+                Filmstrip(store: store).frame(height: 150)
+            }
+        case .viewer:
+            ImageViewer(store: store)
+        }
+    }
+
+    private var filterBar: some View {
+        HStack(spacing: 12) {
+            Picker("Rating", selection: $store.filter.minRating) {
+                Text("All").tag(0)
+                ForEach(1...5, id: \.self) { Text("\($0)★+").tag($0) }
+            }
+            .pickerStyle(.menu).frame(width: 110)
+
+            Toggle("Flagged", isOn: $store.filter.flaggedOnly).toggleStyle(.button)
+            Toggle("Edited", isOn: $store.filter.adjustedOnly).toggleStyle(.button)
+
+            TextField("Filter by name", text: $store.filter.nameContains)
+                .textFieldStyle(.roundedBorder).frame(width: 160)
+
+            Spacer()
+            Text("\(store.visiblePhotos.count) photos")
+                .foregroundStyle(Theme.textSecondary).font(.caption)
+        }
+        .padding(.horizontal, 12).padding(.vertical, 6)
+        .background(Theme.panel)
+    }
+
+    // MARK: - Toolbar
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .navigation) {
+            Button { openLibrary() } label: { Label("Open Library", systemImage: "folder") }
+        }
+        ToolbarItem(placement: .principal) {
+            Picker("View", selection: $store.viewMode) {
+                ForEach(ViewMode.allCases) { mode in
+                    Label(mode.label, systemImage: mode.systemImage).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+        }
+        ToolbarItem(placement: .automatic) {
+            Toggle("Save edits", isOn: $store.writesEnabled)
+                .help("When on, ratings, flags and labels are written back to the library on disk.")
+        }
+    }
+
     private func openLibrary() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = true
-        panel.allowedContentTypes = []
         panel.message = "Choose an Aperture library (.aplibrary)"
         if panel.runModal() == .OK, let url = panel.url {
             store.open(url: url)
@@ -58,20 +124,17 @@ struct ContentView: View {
     }
 }
 
-/// Simple placeholder shown before a library is opened (avoids depending on
-/// ContentUnavailableView, which is macOS 14+ only).
+/// Placeholder shown before a library is opened.
 struct ContentUnavailablePlaceholder: View {
     let action: () -> Void
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: "photo.on.rectangle.angled")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-            Text("No library open")
-                .font(.title2)
+                .font(.system(size: 48)).foregroundStyle(Theme.textSecondary)
+            Text("No library open").font(.title2).foregroundStyle(Theme.textPrimary)
             Button("Open Library…", action: action)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.background)
+        .background(Theme.appBackground)
     }
 }

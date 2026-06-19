@@ -1,117 +1,118 @@
 import SwiftUI
 import AppKit
-import CoreGraphics
 import OpenLensKit
 
-struct PhotoGrid: View {
+/// A single thumbnail cell, shared by the grid and the filmstrip.
+struct PhotoThumbnail: View {
     @ObservedObject var store: LibraryStore
-
-    private let columns = [GridItem(.adaptive(minimum: 140), spacing: 12)]
-
-    var body: some View {
-        VStack(spacing: 0) {
-            filterBar
-            Divider()
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 12) {
-                    ForEach(store.visiblePhotos) { photo in
-                        Thumbnail(photo: photo,
-                                  library: store.library,
-                                  isSelected: photo.id == store.selectedPhotoID)
-                            .onTapGesture { store.selectedPhotoID = photo.id }
-                    }
-                }
-                .padding(12)
-            }
-        }
-        .navigationTitle(currentProjectName)
-    }
-
-    private var filterBar: some View {
-        HStack(spacing: 12) {
-            Picker("Rating", selection: $store.filter.minRating) {
-                Text("All").tag(0)
-                ForEach(1...5, id: \.self) { Text("\($0)★+").tag($0) }
-            }
-            .pickerStyle(.menu)
-            .frame(width: 110)
-
-            Toggle("Flagged", isOn: $store.filter.flaggedOnly)
-                .toggleStyle(.button)
-
-            Toggle("Edited", isOn: $store.filter.adjustedOnly)
-                .toggleStyle(.button)
-
-            TextField("Filter by name", text: $store.filter.nameContains)
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 160)
-
-            Spacer()
-            Text("\(store.visiblePhotos.count) photos")
-                .foregroundStyle(.secondary)
-                .font(.caption)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-    }
-
-    private var currentProjectName: String {
-        store.projects.first { $0.id == store.selectedProjectID }?.name ?? "All Photos"
-    }
-}
-
-struct Thumbnail: View {
     let photo: Photo
-    let library: ApertureLibrary?
-    let isSelected: Bool
+    var size: CGFloat = 150
+    var showCaption: Bool = true
 
     @State private var image: NSImage?
+    private var isSelected: Bool { photo.id == store.selectedPhotoID }
 
     var body: some View {
         VStack(spacing: 4) {
             ZStack {
-                RoundedRectangle(cornerRadius: 6).fill(.quaternary)
+                RoundedRectangle(cornerRadius: 4).fill(Theme.viewerBackground)
                 if let image {
-                    Image(nsImage: image)
-                        .resizable()
-                        .scaledToFit()
+                    Image(nsImage: image).resizable().scaledToFit()
                 } else {
                     ProgressView().controlSize(.small)
                 }
             }
-            .frame(height: 110)
+            .frame(width: size, height: size * 0.72)
             .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .strokeBorder(isSelected ? Color.accentColor : .clear, lineWidth: 3)
+                RoundedRectangle(cornerRadius: 4)
+                    .strokeBorder(isSelected ? Theme.selection : Theme.hairline,
+                                  lineWidth: isSelected ? 3 : 1)
             )
 
-            HStack(spacing: 3) {
-                ForEach(1...5, id: \.self) { star in
-                    Image(systemName: star <= photo.version.rating ? "star.fill" : "star")
-                        .font(.system(size: 8))
-                        .foregroundStyle(star <= photo.version.rating ? .yellow : .secondary)
+            if showCaption {
+                HStack(spacing: 3) {
+                    ForEach(1...5, id: \.self) { star in
+                        Image(systemName: star <= photo.version.rating ? "star.fill" : "star")
+                            .font(.system(size: 7))
+                            .foregroundStyle(star <= photo.version.rating ? .yellow : Theme.textSecondary)
+                    }
+                    if photo.version.isFlagged {
+                        Image(systemName: "flag.fill").font(.system(size: 7)).foregroundStyle(.orange)
+                    }
+                    if let c = ColorLabelStyle.color(photo.version.colorLabel) {
+                        Circle().fill(c).frame(width: 6, height: 6)
+                    }
                 }
-                if photo.version.isFlagged {
-                    Image(systemName: "flag.fill").font(.system(size: 8)).foregroundStyle(.orange)
-                }
+                Text(photo.version.name)
+                    .font(.caption2)
+                    .foregroundStyle(isSelected ? Theme.textPrimary : Theme.textSecondary)
+                    .lineLimit(1)
             }
-            Text(photo.version.name)
-                .font(.caption2)
-                .lineLimit(1)
         }
-        .task(id: photo.id) { await loadImage() }
+        .contentShape(Rectangle())
+        .onTapGesture { store.selectedPhotoID = photo.id }
+        .task(id: "\(photo.id)-\(Int(size))") { await load() }
     }
 
-    private func loadImage() async {
-        guard let library else { return }
-        // Prefer Aperture's cached thumbnail; fall back to the master. ImageIO
-        // decodes RAW + applies orientation, and downsamples for the grid.
-        let url = library.displayImageURL(for: photo)
-        let cg = await Task.detached(priority: .utility) { () -> CGImage? in
-            ImageLoader.cgImage(at: url, maxPixelSize: 320)
-        }.value
-        if let cg {
-            self.image = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
+    private func load() async {
+        guard let lib = store.library else { return }
+        image = await ImageCache.shared.image(for: photo, in: lib, maxPixel: Int(size * 2))
+    }
+}
+
+/// The grid browser (Aperture's "Browser" view).
+struct GridBrowser: View {
+    @ObservedObject var store: LibraryStore
+    var body: some View {
+        ScrollView {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: store.thumbnailSize + 20), spacing: 14)],
+                      spacing: 14) {
+                ForEach(store.visiblePhotos) { photo in
+                    PhotoThumbnail(store: store, photo: photo, size: store.thumbnailSize)
+                }
+            }
+            .padding(16)
+        }
+        .background(Theme.appBackground)
+    }
+}
+
+/// The horizontal filmstrip shown beneath the viewer in Split view.
+struct Filmstrip: View {
+    @ObservedObject var store: LibraryStore
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(store.visiblePhotos) { photo in
+                        PhotoThumbnail(store: store, photo: photo, size: 96, showCaption: false)
+                            .id(photo.id)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+            }
+            .background(Theme.panel)
+            .onChange(of: store.selectedPhotoID) { id in
+                guard let id else { return }
+                withAnimation { proxy.scrollTo(id, anchor: .center) }
+            }
+        }
+    }
+}
+
+/// Colour-label palette matching Aperture's `colorLabelIndex`.
+enum ColorLabelStyle {
+    static func color(_ index: Int) -> Color? {
+        switch ColorLabel(rawValue: index) ?? .none {
+        case .none: return nil
+        case .red: return .red
+        case .orange: return .orange
+        case .yellow: return .yellow
+        case .green: return .green
+        case .blue: return .blue
+        case .purple: return .purple
+        case .gray: return .gray
         }
     }
 }

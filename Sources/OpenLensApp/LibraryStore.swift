@@ -22,6 +22,10 @@ final class LibraryStore: ObservableObject {
     /// Default off — browsing is non-destructive until the user opts in.
     @Published var writesEnabled = false
 
+    /// Current browser layout and thumbnail size (Aperture-style).
+    @Published var viewMode: ViewMode = .split
+    @Published var thumbnailSize: Double = 150
+
     @Published var filter = PhotoFilter()
 
     var visiblePhotos: [Photo] {
@@ -76,6 +80,26 @@ final class LibraryStore: ObservableObject {
         } catch {
             errorMessage = "Failed to save rating: \(error)"
         }
+    }
+
+    func setColorLabel(_ label: Int, for photo: Photo) {
+        updateLocal(photo) { $0.colorLabel = label }
+        guard writesEnabled, let lib = library else { return }
+        do {
+            let writer = ApertureLibraryWriter(libraryURL: lib.url, allowWrites: true)
+            try writer.setColorLabel(label, forVersion: photo.version.id)
+        } catch {
+            errorMessage = "Failed to save color label: \(error)"
+        }
+    }
+
+    /// Selects the next/previous photo in the visible set (arrow-key nav).
+    func selectOffset(_ delta: Int) {
+        let photos = visiblePhotos
+        guard !photos.isEmpty else { return }
+        let idx = photos.firstIndex { $0.id == selectedPhotoID } ?? 0
+        let next = max(0, min(photos.count - 1, idx + delta))
+        selectedPhotoID = photos[next].id
     }
 
     func toggleFlag(for photo: Photo) {

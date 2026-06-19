@@ -36,6 +36,8 @@ struct ProjectSidebar: View {
             }
         }
         .listStyle(.sidebar)
+        .scrollContentBackground(.hidden)
+        .background(Theme.panel)
     }
 
     @ViewBuilder

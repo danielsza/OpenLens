@@ -9,6 +9,9 @@ struct PhotoInspector: View {
     @State private var meta: VersionMetadata?
     @State private var keywords: [String] = []
     @State private var adjustments: [String] = []
+    @State private var tab: InspectorTab = .info
+
+    enum InspectorTab { case info, adjustments }
 
     var body: some View {
         if let photo = store.selectedPhoto {
@@ -45,23 +48,34 @@ struct PhotoInspector: View {
                               systemImage: photo.version.isFlagged ? "flag.fill" : "flag")
                     }
 
-                    Divider()
-
-                    // Metadata
-                    metadata(photo)
-
-                    if !keywords.isEmpty {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Keywords").font(.caption).foregroundStyle(.secondary)
-                            Text(keywords.joined(separator: ", ")).font(.caption)
-                        }
+                    Picker("", selection: $tab) {
+                        Text("Info").tag(InspectorTab.info)
+                        Text("Adjustments").tag(InspectorTab.adjustments)
                     }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
 
-                    if !adjustments.isEmpty {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Adjustments").font(.caption).foregroundStyle(.secondary)
-                            Text(adjustments.joined(separator: ", ")).font(.caption)
+                    if tab == .info {
+                        metadata(photo)
+                        if !keywords.isEmpty {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Keywords").font(.caption).foregroundStyle(.secondary)
+                                Text(keywords.joined(separator: ", ")).font(.caption)
+                            }
                         }
+                    } else {
+                        if adjustments.isEmpty {
+                            Text("No adjustments on this photo")
+                                .font(.caption).foregroundStyle(.secondary)
+                        } else {
+                            VStack(alignment: .leading, spacing: 4) {
+                                ForEach(adjustments, id: \.self) { a in
+                                    Label(a, systemImage: "slider.horizontal.3").font(.caption)
+                                }
+                            }
+                        }
+                        Text("Adjustment editing is coming soon.")
+                            .font(.caption2).foregroundStyle(.secondary)
                     }
 
                     Divider()
@@ -75,11 +89,13 @@ struct PhotoInspector: View {
                 }
                 .padding()
             }
+            .background(Theme.panel)
             .task(id: photo.id) { await load(photo) }
         } else {
-            Text("Select a photo")
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            ZStack {
+                Theme.panel
+                Text("Select a photo").foregroundStyle(Theme.textSecondary)
+            }
         }
     }
 

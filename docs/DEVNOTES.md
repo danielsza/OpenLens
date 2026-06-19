@@ -132,6 +132,14 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   and `emptyTrash()` (removes catalog rows; deletes master row + file + version
   plist folder when no version references the master). Irreversible.
 
+- **2026-06-19** Aperture-style **dark UI**: charcoal `Theme`, toolbar
+  Grid/Split/Viewer toggle, Split = viewer + filmstrip, big `ImageViewer`,
+  bottom `ControlBar` (rating/flag/colour labels/thumbnail-size), shared
+  `PhotoThumbnail`, `ImageCache` (NSCache) for scroll perf, dark sidebar +
+  inspector with Info/Adjustments tabs, arrow-key photo navigation. UI is
+  compile-checked via CI only — Daniel reviews the look and sends screenshots
+  to refine greys/spacing.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.
