@@ -29,6 +29,11 @@ struct OpenLensApp: App {
                     NotificationCenter.default.post(name: .closeLibraryRequested, object: nil)
                 }
                 .keyboardShortcut("w", modifiers: [.command, .shift])
+                Divider()
+                Button("Export…") {
+                    NotificationCenter.default.post(name: .exportRequested, object: nil)
+                }
+                .keyboardShortcut("e", modifiers: [.command, .shift])
             }
             CommandMenu("Photo") {
                 Button("Duplicate Version") {
@@ -57,6 +62,7 @@ extension Notification.Name {
     static let moveToTrashRequested = Notification.Name("moveToTrashRequested")
     static let restoreRequested = Notification.Name("restoreRequested")
     static let emptyTrashRequested = Notification.Name("emptyTrashRequested")
+    static let exportRequested = Notification.Name("exportRequested")
     static let openLibraryRequested = Notification.Name("openLibraryRequested")
     static let closeLibraryRequested = Notification.Name("closeLibraryRequested")
 }

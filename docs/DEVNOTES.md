@@ -200,6 +200,12 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   (control bar + keyboard apply to the whole selection), batch move-to-trash,
   selection count in the status bar.
 
+- **2026-06-19** Export presets (Aperture-style): `ExportSettings` (format
+  JPEG/PNG/TIFF/originals, max long-edge, quality, DPI) + `Watermark` (text or
+  image, position, opacity) rendered via CoreGraphics/CoreText; `Exporter`
+  settings API + tests; an Export sheet (File ▸ Export…, ⇧⌘E) for selection or
+  all-shown.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

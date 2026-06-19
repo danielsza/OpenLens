@@ -6,6 +6,7 @@ import OpenLensKit
 struct ContentView: View {
     @StateObject private var store = LibraryStore()
     @State private var didAutoOpen = false
+    @State private var showExport = false
 
     var body: some View {
         HSplitView {
@@ -41,6 +42,12 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .emptyTrashRequested)) { _ in
             confirmEmptyTrash()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .exportRequested)) { _ in
+            if store.library != nil { showExport = true }
+        }
+        .sheet(isPresented: $showExport) {
+            ExportSheet(store: store, isPresented: $showExport)
         }
         .onAppear { autoOpenIfNeeded() }
         .alert("Library error",

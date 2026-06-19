@@ -45,6 +45,28 @@ final class ExporterTests: XCTestCase {
         XCTAssertLessThanOrEqual(max(decoded.width, decoded.height), 160)
     }
 
+    func testExportWithSettingsFormatsAndWatermark() throws {
+        let lib = try openTestLibrary()
+        let dir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let exporter = Exporter(library: lib)
+        let photo = try XCTUnwrap(try lib.photos().first)
+
+        // PNG, resized.
+        let png = try exporter.export(photo, to: dir,
+            settings: ExportSettings(format: .png, maxPixelSize: 100))
+        XCTAssertEqual(png.pathExtension, "png")
+        XCTAssertTrue(ImageLoader.canDecode(png))
+
+        // JPEG with a text watermark + DPI.
+        let jpg = try exporter.export(photo, to: dir,
+            settings: ExportSettings(format: .jpeg, maxPixelSize: 200, jpegQuality: 0.8,
+                                     dpi: 300, watermark: Watermark(text: "© Test", position: .bottomRight)))
+        XCTAssertEqual(jpg.pathExtension, "jpg")
+        let decoded = try XCTUnwrap(ImageLoader.cgImage(at: jpg, maxPixelSize: 400))
+        XCTAssertLessThanOrEqual(max(decoded.width, decoded.height), 240)
+    }
+
     func testBatchExportAndUniqueNaming() throws {
         let lib = try openTestLibrary()
         let dir = try makeTempDir()

@@ -91,7 +91,7 @@ public struct Exporter {
         return (written, failures)
     }
 
-    private func uniqueURL(in dir: URL, base: String, ext: String) -> URL {
+    func uniqueURL(in dir: URL, base: String, ext: String) -> URL {
         let fm = FileManager.default
         var candidate = dir.appendingPathComponent("\(base).\(ext)")
         var n = 1
