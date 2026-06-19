@@ -42,6 +42,7 @@ struct ContentView: View {
             ControlBar(store: store)
         }
         .background(Theme.appBackground)
+        .background(keyboardShortcuts)
         .focusable()
         .onMoveCommand { direction in
             switch direction {
@@ -50,6 +51,25 @@ struct ContentView: View {
             default: break
             }
         }
+    }
+
+    /// Hidden buttons providing Aperture-style keyboard shortcuts: 1–5 rate,
+    /// 0 clears, "/" toggles flag.
+    private var keyboardShortcuts: some View {
+        Group {
+            ForEach(0...5, id: \.self) { n in
+                Button("") {
+                    if let p = store.selectedPhoto { store.setRating(n, for: p) }
+                }
+                .keyboardShortcut(KeyEquivalent(Character("\(n)")), modifiers: [])
+            }
+            Button("") {
+                if let p = store.selectedPhoto { store.toggleFlag(for: p) }
+            }
+            .keyboardShortcut("/", modifiers: [])
+        }
+        .opacity(0)
+        .frame(width: 0, height: 0)
     }
 
     @ViewBuilder
