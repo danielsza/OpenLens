@@ -27,7 +27,7 @@ public struct Exporter {
         case rendered(maxPixelSize: Int, quality: Double)  // re-encode as JPEG
     }
 
-    private let library: ApertureLibrary
+    let library: ApertureLibrary
 
     public init(library: ApertureLibrary) {
         self.library = library
