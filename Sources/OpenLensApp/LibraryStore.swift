@@ -47,6 +47,8 @@ final class LibraryStore: ObservableObject {
     @Published var thumbnailSize: Double = 150
 
     @Published var filter = PhotoFilter()
+    @Published var sort: PhotoSort = .date
+    @Published var sortAscending = true
 
     var visiblePhotos: [Photo] {
         let base: [Photo]
@@ -64,7 +66,7 @@ final class LibraryStore: ObservableObject {
         } else {
             base = photos
         }
-        return filter.apply(to: base)
+        return filter.apply(to: base).sorted(by: sort, ascending: sortAscending)
     }
 
     func selectProject(_ id: String?) {

@@ -127,6 +127,17 @@ struct ContentView: View {
             TextField("Filter by name", text: $store.filter.nameContains)
                 .textFieldStyle(.roundedBorder).frame(width: 160)
 
+            Picker("Sort", selection: $store.sort) {
+                ForEach(PhotoSort.allCases) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.menu).frame(width: 130)
+            Button {
+                store.sortAscending.toggle()
+            } label: {
+                Image(systemName: store.sortAscending ? "arrow.up" : "arrow.down")
+            }
+            .help("Sort direction")
+
             Spacer()
             Text(statusText)
                 .foregroundStyle(Theme.textSecondary).font(.caption)

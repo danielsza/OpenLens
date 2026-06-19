@@ -193,6 +193,9 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   adjustments) guard on `tableExists` so libraries from other Aperture builds
   (missing a table) degrade to empty instead of crashing. + test.
 
+- **2026-06-19** Browser sort (Date/Name/Rating/File Name, asc/desc) —
+  `[Photo].sorted(by:)` + filter-bar control. + test.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.
