@@ -36,6 +36,30 @@ final class TrashTests: XCTestCase {
         XCTAssertTrue(try restored.trashedPhotos().isEmpty)
     }
 
+    func testEmptyTrashPermanentlyDeletes() throws {
+        let lib = try copyOfTestLibrary()
+        defer { try? FileManager.default.removeItem(at: lib) }
+
+        let before = try ApertureLibrary(url: lib)
+        let startCount = try before.photos().count
+        // Trash a photo that isn't the album poster (the 2nd, unflagged one).
+        let target = try XCTUnwrap(try before.photos().last)
+        let masterURL = before.masterFileURL(for: target.master)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: masterURL.path))
+
+        let writer = ApertureLibraryWriter(libraryURL: lib, allowWrites: true)
+        try writer.moveToTrash(versionUuid: target.version.id)
+        let deleted = try writer.emptyTrash()
+        XCTAssertGreaterThanOrEqual(deleted, 1)
+
+        let after = try ApertureLibrary(url: lib)
+        XCTAssertEqual(try after.photos().count, startCount - 1)
+        XCTAssertFalse(try after.photos().contains { $0.id == target.id })
+        XCTAssertTrue(try after.trashedPhotos().isEmpty)
+        // The original file was removed (no other version referenced the master).
+        XCTAssertFalse(FileManager.default.fileExists(atPath: masterURL.path))
+    }
+
     func testTrashWriteRequiresOptIn() throws {
         let lib = try copyOfTestLibrary()
         defer { try? FileManager.default.removeItem(at: lib) }

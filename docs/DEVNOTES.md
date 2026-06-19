@@ -124,6 +124,14 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   the `NSKeyedArchiver` blob format can't be reverse-engineered yet. Ask Daniel
   for an edited `.aplibrary` (a copy) to proceed with adjustment rendering.
 
+- **2026-06-17** Verified the writer's operations (rating + plist/IPTC, keyword
+  create/assign, trash) against a COPY of the *real* `test.aplibrary` via a
+  Python replay — confirms our SQL + binary-plist edits work on genuine data,
+  not just the synthetic fixture.
+- **2026-06-17** Added guarded permanent delete: `permanentlyDelete(versionUuid:)`
+  and `emptyTrash()` (removes catalog rows; deletes master row + file + version
+  plist folder when no version references the master). Irreversible.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

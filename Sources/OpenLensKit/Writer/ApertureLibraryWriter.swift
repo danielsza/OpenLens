@@ -105,6 +105,61 @@ public final class ApertureLibraryWriter {
                           iptcStarRating: nil)
     }
 
+    /// PERMANENTLY deletes a version: removes its catalog rows and, if no other
+    /// version references its master, the master row, the original file, and the
+    /// version plist folder. Irreversible — back up first. No-op if the version
+    /// doesn't exist.
+    public func permanentlyDelete(versionUuid uuid: String) throws {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+
+        let vrows = try db.query(
+            "SELECT modelId, masterUuid FROM RKVersion WHERE uuid = ?", [.text(uuid)])
+        guard let v = vrows.first,
+              let modelId = v["modelId"]?.intValue,
+              let masterUuid = v["masterUuid"]?.stringValue else { return }
+
+        let mrows = try db.query(
+            "SELECT imagePath FROM RKMaster WHERE uuid = ?", [.text(masterUuid)])
+        let imagePath = mrows.first?["imagePath"]?.stringValue
+
+        // Remove association + version rows.
+        try db.execute("DELETE FROM RKKeywordForVersion WHERE versionId = ?", [.integer(Int64(modelId))])
+        try db.execute("DELETE FROM RKAlbumVersion WHERE versionId = ?", [.integer(Int64(modelId))])
+        try db.execute("DELETE FROM RKStackContent WHERE versionUuid = ?", [.text(uuid)])
+        try db.execute("DELETE FROM RKVersion WHERE uuid = ?", [.text(uuid)])
+
+        // If the master now has no versions, delete it and its files.
+        let remaining = try db.query(
+            "SELECT 1 FROM RKVersion WHERE masterUuid = ?", [.text(masterUuid)])
+        if remaining.isEmpty {
+            try db.execute("DELETE FROM RKMaster WHERE uuid = ?", [.text(masterUuid)])
+            if let imagePath {
+                let fm = FileManager.default
+                let masterURL = libraryURL.appendingPathComponent("Masters").appendingPathComponent(imagePath)
+                try? fm.removeItem(at: masterURL)
+                let datePath = (imagePath as NSString).deletingLastPathComponent
+                let versionDir = libraryURL
+                    .appendingPathComponent("Database/Versions")
+                    .appendingPathComponent(datePath)
+                    .appendingPathComponent(masterUuid)
+                try? fm.removeItem(at: versionDir)
+            }
+        }
+    }
+
+    /// Empties the trash by permanently deleting every trashed version. Returns
+    /// the number of versions removed. Irreversible — back up first.
+    @discardableResult
+    public func emptyTrash() throws -> Int {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: true)
+        let rows = try db.query("SELECT uuid FROM RKVersion WHERE isInTrash = 1")
+        let uuids = rows.compactMap { $0["uuid"]?.stringValue }
+        for uuid in uuids { try permanentlyDelete(versionUuid: uuid) }
+        return uuids.count
+    }
+
     // MARK: - Keywords
 
     /// Assigns a keyword (by name) to a version, creating the keyword in the
