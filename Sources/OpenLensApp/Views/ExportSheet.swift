@@ -3,20 +3,33 @@ import AppKit
 import OpenLensKit
 
 /// Aperture-style export dialog: format, size, resolution, quality, watermark.
+/// Settings persist across launches via @AppStorage.
 struct ExportSheet: View {
     @ObservedObject var store: LibraryStore
     @Binding var isPresented: Bool
 
-    @State private var format: ExportSettings.Format = .jpeg
-    @State private var maxEdge: Int = 0
-    @State private var quality: Double = 0.9
-    @State private var dpiText: String = ""
-    @State private var watermarkText: String = ""
-    @State private var watermarkImageURL: URL?
-    @State private var watermarkScale: Double = 0.25
-    @State private var watermarkPosition: Watermark.Position = .bottomCenter
-    @State private var watermarkOpacity: Double = 0.5
-    @State private var selectionOnly = true
+    @AppStorage("export.format") private var formatRaw = ExportSettings.Format.jpeg.rawValue
+    @AppStorage("export.maxEdge") private var maxEdge = 0          // 0 full, -1 custom
+    @AppStorage("export.customEdge") private var customEdge = 1600
+    @AppStorage("export.quality") private var quality = 0.9
+    @AppStorage("export.dpi") private var dpiText = ""
+    @AppStorage("export.wmText") private var watermarkText = ""
+    @AppStorage("export.logoPath") private var logoPath = ""
+    @AppStorage("export.wmScale") private var watermarkScale = 0.25
+    @AppStorage("export.wmPos") private var positionRaw = Watermark.Position.bottomCenter.rawValue
+    @AppStorage("export.wmOpacity") private var watermarkOpacity = 0.5
+    @AppStorage("export.selectionOnly") private var selectionOnly = true
+
+    private var format: ExportSettings.Format { .init(rawValue: formatRaw) ?? .jpeg }
+    private var formatBinding: Binding<ExportSettings.Format> {
+        Binding(get: { format }, set: { formatRaw = $0.rawValue })
+    }
+    private var positionBinding: Binding<Watermark.Position> {
+        Binding(get: { Watermark.Position(rawValue: positionRaw) ?? .bottomCenter },
+                set: { positionRaw = $0.rawValue })
+    }
+    private var effectiveMaxEdge: Int { maxEdge == -1 ? max(1, customEdge) : maxEdge }
+    private var logoURL: URL? { logoPath.isEmpty ? nil : URL(fileURLWithPath: logoPath) }
 
     private var selectionCount: Int {
         store.selectedPhotoIDs.isEmpty ? (store.selectedPhotoID == nil ? 0 : 1) : store.selectedPhotoIDs.count
@@ -27,7 +40,7 @@ struct ExportSheet: View {
             Text("Export Photos").font(.title2).bold()
 
             Form {
-                Picker("Format", selection: $format) {
+                Picker("Format", selection: formatBinding) {
                     Text("Original files").tag(ExportSettings.Format.originals)
                     Text("JPEG").tag(ExportSettings.Format.jpeg)
                     Text("PNG").tag(ExportSettings.Format.png)
@@ -41,6 +54,14 @@ struct ExportSheet: View {
                         Text("2048 px").tag(2048)
                         Text("1024 px").tag(1024)
                         Text("640 px").tag(640)
+                        Text("Custom…").tag(-1)
+                    }
+                    if maxEdge == -1 {
+                        HStack {
+                            Text("Long edge")
+                            TextField("px", value: $customEdge, format: .number).frame(width: 80)
+                            Text("px").foregroundStyle(.secondary)
+                        }
                     }
                     if format == .jpeg {
                         HStack {
@@ -54,27 +75,25 @@ struct ExportSheet: View {
                     Divider()
                     Text("Watermark").font(.headline)
                     TextField("Text (leave blank for none)", text: $watermarkText)
-
                     HStack {
                         Text("Logo")
-                        if let url = watermarkImageURL {
+                        if let url = logoURL {
                             Text(url.lastPathComponent).lineLimit(1).truncationMode(.middle)
-                            Button("Clear") { watermarkImageURL = nil }
+                            Button("Clear") { logoPath = "" }
                         } else {
                             Text("None").foregroundStyle(.secondary)
                         }
                         Spacer()
                         Button("Choose Image…") { chooseLogo() }
                     }
-                    if watermarkImageURL != nil {
+                    if logoURL != nil {
                         HStack {
                             Text("Logo size")
                             Slider(value: $watermarkScale, in: 0.05...0.6)
                             Text("\(Int(watermarkScale * 100))%").monospacedDigit().frame(width: 42)
                         }
                     }
-
-                    Picker("Position", selection: $watermarkPosition) {
+                    Picker("Position", selection: positionBinding) {
                         ForEach(Watermark.Position.allCases, id: \.self) { Text($0.displayName).tag($0) }
                     }
                     HStack {
@@ -100,7 +119,7 @@ struct ExportSheet: View {
             }
         }
         .padding(20)
-        .frame(width: 420)
+        .frame(width: 440)
     }
 
     private func photosToExport() -> [Photo] {
@@ -119,7 +138,7 @@ struct ExportSheet: View {
         panel.canChooseDirectories = false
         panel.allowedContentTypes = [.image]
         panel.message = "Choose a watermark/logo image (PNG with transparency works best)"
-        if panel.runModal() == .OK { watermarkImageURL = panel.url }
+        if panel.runModal() == .OK, let url = panel.url { logoPath = url.path }
     }
 
     private func runExport() {
@@ -136,18 +155,18 @@ struct ExportSheet: View {
         guard panel.runModal() == .OK, let dest = panel.url else { return }
 
         var watermark: Watermark?
-        if let logo = watermarkImageURL {
+        let position = Watermark.Position(rawValue: positionRaw) ?? .bottomCenter
+        if let logo = logoURL {
             watermark = Watermark(imageURL: logo, opacity: watermarkOpacity,
-                                  scale: watermarkScale, position: watermarkPosition)
+                                  scale: watermarkScale, position: position)
         } else if !watermarkText.trimmingCharacters(in: .whitespaces).isEmpty {
-            watermark = Watermark(text: watermarkText, opacity: watermarkOpacity, position: watermarkPosition)
+            watermark = Watermark(text: watermarkText, opacity: watermarkOpacity, position: position)
         }
         let settings = ExportSettings(
-            format: format, maxPixelSize: maxEdge, jpegQuality: quality,
+            format: format, maxPixelSize: effectiveMaxEdge, jpegQuality: quality,
             dpi: Double(dpiText.trimmingCharacters(in: .whitespaces)), watermark: watermark)
 
-        let exporter = Exporter(library: lib)
-        let result = exporter.exportBatch(photos, to: dest, settings: settings)
+        let result = Exporter(library: lib).exportBatch(photos, to: dest, settings: settings)
         isPresented = false
         if !result.failures.isEmpty {
             store.errorMessage = "\(result.failures.count) of \(photos.count) photo(s) failed to export."

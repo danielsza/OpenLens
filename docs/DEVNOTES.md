@@ -209,6 +209,9 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
 - **2026-06-19** Export sheet gains a **logo/image watermark** picker (choose
   image + scale slider) alongside text; watermark default position Bottom Center.
 
+- **2026-06-19** Export dialog now persists settings (@AppStorage) across
+  launches and adds a Custom long-edge size field.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.
