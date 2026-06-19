@@ -140,6 +140,11 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   compile-checked via CI only — Daniel reviews the look and sends screenshots
   to refine greys/spacing.
 
+- **2026-06-19** Matched Aperture's reference screenshot: light-grey chrome +
+  dark photo area palette; merged the left panel into a single **tabbed
+  inspector** (Library / Info / Adjustments) like Aperture (two-pane layout);
+  moved the Grid/Split/Viewer switcher to the top-right.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

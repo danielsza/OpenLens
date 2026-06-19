@@ -3,86 +3,51 @@ import AppKit
 import CoreGraphics
 import OpenLensKit
 
-struct PhotoInspector: View {
+/// The "Info" inspector tab: a small preview, rating/flag, and metadata.
+struct InfoInspector: View {
     @ObservedObject var store: LibraryStore
     @State private var preview: NSImage?
     @State private var meta: VersionMetadata?
     @State private var keywords: [String] = []
-    @State private var adjustments: [String] = []
-    @State private var tab: InspectorTab = .info
-
-    enum InspectorTab { case info, adjustments }
 
     var body: some View {
         if let photo = store.selectedPhoto {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 14) {
                     if let preview {
                         Image(nsImage: preview)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxHeight: 220)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                            .resizable().scaledToFit()
+                            .frame(maxHeight: 160)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
                     }
-                    Text(photo.version.name).font(.title3).bold()
+                    Text(photo.version.name).font(.headline)
 
-                    // Rating
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Rating").font(.caption).foregroundStyle(.secondary)
-                        HStack(spacing: 4) {
-                            ForEach(1...5, id: \.self) { star in
-                                Image(systemName: star <= photo.version.rating ? "star.fill" : "star")
-                                    .foregroundStyle(star <= photo.version.rating ? .yellow : .secondary)
-                                    .onTapGesture {
-                                        let newRating = (photo.version.rating == star) ? 0 : star
-                                        store.setRating(newRating, for: photo)
-                                    }
-                            }
-                        }
-                    }
-
-                    Button {
-                        store.toggleFlag(for: photo)
-                    } label: {
-                        Label(photo.version.isFlagged ? "Flagged" : "Flag",
-                              systemImage: photo.version.isFlagged ? "flag.fill" : "flag")
-                    }
-
-                    Picker("", selection: $tab) {
-                        Text("Info").tag(InspectorTab.info)
-                        Text("Adjustments").tag(InspectorTab.adjustments)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-
-                    if tab == .info {
-                        metadata(photo)
-                        if !keywords.isEmpty {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Keywords").font(.caption).foregroundStyle(.secondary)
-                                Text(keywords.joined(separator: ", ")).font(.caption)
-                            }
-                        }
-                    } else {
-                        if adjustments.isEmpty {
-                            Text("No adjustments on this photo")
-                                .font(.caption).foregroundStyle(.secondary)
-                        } else {
-                            VStack(alignment: .leading, spacing: 4) {
-                                ForEach(adjustments, id: \.self) { a in
-                                    Label(a, systemImage: "slider.horizontal.3").font(.caption)
+                    HStack(spacing: 4) {
+                        ForEach(1...5, id: \.self) { star in
+                            Image(systemName: star <= photo.version.rating ? "star.fill" : "star")
+                                .foregroundStyle(star <= photo.version.rating ? .yellow : .secondary)
+                                .onTapGesture {
+                                    store.setRating(photo.version.rating == star ? 0 : star, for: photo)
                                 }
-                            }
                         }
-                        Text("Adjustment editing is coming soon.")
-                            .font(.caption2).foregroundStyle(.secondary)
+                        Spacer()
+                        Button { store.toggleFlag(for: photo) } label: {
+                            Image(systemName: photo.version.isFlagged ? "flag.fill" : "flag")
+                        }.buttonStyle(.plain)
                     }
 
                     Divider()
+                    metadata(photo)
 
-                    Button {
-                        openInExternalEditor(photo)
-                    } label: {
+                    if !keywords.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Keywords").font(.caption).foregroundStyle(.secondary)
+                            Text(keywords.joined(separator: ", ")).font(.caption)
+                        }
+                    }
+
+                    Divider()
+                    Button { openInExternalEditor(photo) } label: {
                         Label("Open in External Editor", systemImage: "square.and.pencil")
                     }
                     .help("Opens the master file in your default image editor.")
@@ -92,11 +57,12 @@ struct PhotoInspector: View {
             .background(Theme.panel)
             .task(id: photo.id) { await load(photo) }
         } else {
-            ZStack {
-                Theme.panel
-                Text("Select a photo").foregroundStyle(Theme.textSecondary)
-            }
+            placeholder
         }
+    }
+
+    private var placeholder: some View {
+        ZStack { Theme.panel; Text("Select a photo").foregroundStyle(.secondary) }
     }
 
     private func load(_ photo: Photo) async {
@@ -104,10 +70,9 @@ struct PhotoInspector: View {
         guard let library = store.library else { return }
         self.meta = library.metadata(for: photo)
         self.keywords = (try? library.keywords(for: photo)) ?? []
-        self.adjustments = (try? library.enabledAdjustmentNames(for: photo)) ?? []
         let url = library.displayImageURL(for: photo)
         let cg = await Task.detached(priority: .userInitiated) { () -> CGImage? in
-            ImageLoader.cgImage(at: url, maxPixelSize: 800)
+            ImageLoader.cgImage(at: url, maxPixelSize: 600)
         }.value
         if let cg {
             self.preview = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
@@ -127,15 +92,12 @@ struct PhotoInspector: View {
             row("Type", photo.master.type)
             if photo.version.hasAdjustments { row("Edited", "Yes") }
             if photo.master.isReference { row("Referenced", "Yes") }
-
             if let meta {
                 let camera = [meta.cameraMake, meta.cameraModel].compactMap { $0 }.joined(separator: " ")
                 if !camera.isEmpty { row("Camera", camera) }
                 if let lens = meta.lensModel { row("Lens", lens) }
                 if !meta.exposureSummary.isEmpty { row("Exposure", meta.exposureSummary) }
-                if let copyright = meta.copyright, !copyright.isEmpty {
-                    row("Copyright", copyright)
-                }
+                if let copyright = meta.copyright, !copyright.isEmpty { row("Copyright", copyright) }
             }
         }
         .font(.caption)
@@ -151,7 +113,46 @@ struct PhotoInspector: View {
 
     private func openInExternalEditor(_ photo: Photo) {
         guard let library = store.library else { return }
-        let url = library.masterFileURL(for: photo.master)
-        NSWorkspace.shared.open(url)
+        NSWorkspace.shared.open(library.masterFileURL(for: photo.master))
+    }
+}
+
+/// The "Adjustments" inspector tab. Lists the adjustments on the selected
+/// photo; editing is a future milestone.
+struct AdjustmentsInspector: View {
+    @ObservedObject var store: LibraryStore
+    @State private var adjustments: [String] = []
+
+    var body: some View {
+        if let photo = store.selectedPhoto {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Adjustments").font(.headline)
+                    if adjustments.isEmpty {
+                        Text("No adjustments on this photo")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        ForEach(adjustments, id: \.self) { a in
+                            Label(a, systemImage: "slider.horizontal.3").font(.callout)
+                        }
+                    }
+                    Divider()
+                    Text("Adjustment editing is coming soon.")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+            }
+            .background(Theme.panel)
+            .task(id: photo.id) {
+                if let lib = store.library {
+                    adjustments = (try? lib.enabledAdjustmentNames(for: photo)) ?? []
+                } else {
+                    adjustments = []
+                }
+            }
+        } else {
+            ZStack { Theme.panel; Text("Select a photo").foregroundStyle(.secondary) }
+        }
     }
 }

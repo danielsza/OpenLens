@@ -7,12 +7,10 @@ struct ContentView: View {
 
     var body: some View {
         HSplitView {
-            ProjectSidebar(store: store)
-                .frame(minWidth: 180, idealWidth: 220, maxWidth: 320)
+            LeftInspector(store: store)
+                .frame(minWidth: 220, idealWidth: 260, maxWidth: 360)
             centerColumn
-                .frame(minWidth: 420)
-            PhotoInspector(store: store)
-                .frame(minWidth: 270, idealWidth: 300, maxWidth: 380)
+                .frame(minWidth: 520)
         }
         .background(Theme.appBackground)
         .toolbar { toolbarContent }
@@ -98,17 +96,18 @@ struct ContentView: View {
         ToolbarItem(placement: .navigation) {
             Button { openLibrary() } label: { Label("Open Library", systemImage: "folder") }
         }
-        ToolbarItem(placement: .principal) {
+        ToolbarItem(placement: .automatic) {
+            Toggle("Save edits", isOn: $store.writesEnabled)
+                .help("When on, ratings, flags and labels are written back to the library on disk.")
+        }
+        ToolbarItem(placement: .primaryAction) {
             Picker("View", selection: $store.viewMode) {
                 ForEach(ViewMode.allCases) { mode in
                     Label(mode.label, systemImage: mode.systemImage).tag(mode)
                 }
             }
             .pickerStyle(.segmented)
-        }
-        ToolbarItem(placement: .automatic) {
-            Toggle("Save edits", isOn: $store.writesEnabled)
-                .help("When on, ratings, flags and labels are written back to the library on disk.")
+            .help("Switch between Grid, Split, and Viewer layouts.")
         }
     }
 
