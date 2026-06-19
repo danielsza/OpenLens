@@ -9,15 +9,24 @@ who organised their whole catalog around its projects + non-destructive
 versions model. OpenLens is an attempt to bring that workflow back on modern
 macOS, working directly with the libraries you already have.
 
-> **Status: working core (Phase 1 complete).** Browsing of projects, albums,
-> photos, thumbnails (RAW-aware via ImageIO), EXIF/IPTC metadata and keywords
-> all work; a filter bar and export (originals + rendered JPEG) are in; and a
-> guarded, tested writer sets ratings/flags/labels — keeping the SQLite catalog
-> and the per-image `.apversion` plist in sync. Everything is built on a
-> documented, reverse-engineered understanding of the format
-> (see [`docs/aperture-format.md`](docs/aperture-format.md)) and covered by a CI
-> test suite that runs against a synthetic fixture. Treat your real libraries as
-> precious and **work on copies** until writing is battle-tested.
+> **Status: working app.** A full create → import → browse → organise → export
+> loop runs today, in an Aperture-style dark UI (Grid/Split/Viewer, tabbed
+> Library/Info/Adjustments inspector, filmstrip, control bar), with last-library
+> memory. Reading: projects, folders (nested), albums + smart albums, keywords,
+> stacks, EXIF/IPTC, GPS, adjustments (listed), RAW-aware thumbnails. Editing
+> (tested, opt-in, DB + `.apversion` plist kept in sync): ratings (incl.
+> Reject), flags, colour labels, keywords, trash (move/restore/empty),
+> duplicate version. Authoring: create a new library, projects, albums, and
+> import photos (with generated thumbnail + EXIF). Plus filter, search,
+> statistics, and export (originals + rendered JPEG). All on a documented,
+> reverse-engineered format ([`docs/aperture-format.md`](docs/aperture-format.md))
+> and a CI suite (60 tests) against a synthetic fixture, which also publishes a
+> runnable `OpenLens.app`.
+>
+> **Not yet:** rendering adjustments (the edit *parameters* still need decoding
+> from a real edited library) and full byte-for-byte Aperture authoring. Treat
+> real libraries as precious and **work on copies** until writing is
+> battle-tested.
 
 ## Goals (feature parity with Aperture)
 
@@ -57,15 +66,20 @@ module, property lists via Foundation.
 Requires macOS 13+ and a Swift toolchain (Xcode 15+).
 
 ```bash
-# Inspect a library from the command line
-swift run openlens-cli /path/to/MyLibrary.aplibrary
-swift run openlens-cli /path/to/MyLibrary.aplibrary --list
-
 # Run the app
 swift run OpenLensApp
 
-# Run the tests against a sample library
-OPENLENS_TEST_LIBRARY=/path/to/test.aplibrary swift test
+# Inspect / author a library from the command line
+swift run openlens-cli /path/to/MyLibrary.aplibrary --list --meta
+swift run openlens-cli /path/to/MyLibrary.aplibrary --search "canon beach"
+swift run openlens-cli /path/to/New.aplibrary --create "My Project"
+swift run openlens-cli /path/to/MyLibrary.aplibrary --import <projectUuid> a.jpg b.jpg
+swift run openlens-cli /path/to/MyLibrary.aplibrary --export /tmp/out --rendered --size 2048
+
+# Run the tests against the committed synthetic fixture
+OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
+
+# Prefer not to build? Download OpenLens.app from the repo's Actions ▸ latest run ▸ Artifacts.
 ```
 
 You can also just open the folder in Xcode (File ▸ Open…) — it reads
