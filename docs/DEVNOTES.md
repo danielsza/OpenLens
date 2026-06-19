@@ -116,6 +116,14 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   yet. Suite at 45.
 - **2026-06-17** Added in-app name filter field and CLI `--search`.
 
+- **2026-06-17** CI now builds release binaries + a runnable `OpenLens.app` and
+  uploads them as artifacts (see docs/building.md). Added date grouping
+  (`[Photo].grouped(by:)`).
+- **BLOCKED:** decoding real adjustment *parameters* needs a library with actual
+  edits — the test library is an unedited import (0 `RKImageAdjustment` rows), so
+  the `NSKeyedArchiver` blob format can't be reverse-engineered yet. Ask Daniel
+  for an edited `.aplibrary` (a copy) to proceed with adjustment rendering.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.
