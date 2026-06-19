@@ -129,7 +129,10 @@ public extension ApertureLibrary {
         m.lensModel = exif["LensModel"] as? String
         m.iso = (exif["ISOSpeedRating"] as? NSNumber)?.intValue
         m.shutterSpeed = (exif["ShutterSpeed"] as? NSNumber)?.doubleValue
-        if let apex = (exif["ApertureValue"] as? NSNumber)?.doubleValue {
+        if let f = (exif["FNumber"] as? NSNumber)?.doubleValue {
+            // Direct f-number (how OpenLens writes imported photos).
+            m.fNumber = f
+        } else if let apex = (exif["ApertureValue"] as? NSNumber)?.doubleValue {
             // EXIF ApertureValue is APEX: f-number = 2^(APEX/2).
             m.fNumber = (pow(2.0, apex / 2.0) * 10).rounded() / 10
         }

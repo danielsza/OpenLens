@@ -53,6 +53,12 @@ final class ImportTests: XCTestCase {
         let masterURL = lib.masterFileURL(for: photo.master)
         XCTAssertTrue(FileManager.default.fileExists(atPath: masterURL.path))
         XCTAssertTrue(ImageLoader.canDecode(lib.displayImageURL(for: photo)))
+
+        // A thumbnail and a Version-1.apversion plist were generated on import.
+        XCTAssertNotNil(lib.thumbnailURL(for: photo), "Import should generate a thumbnail")
+        let meta = try XCTUnwrap(lib.metadata(for: photo))
+        XCTAssertEqual(meta.pixelWidth, 80)
+        XCTAssertEqual(meta.pixelHeight, 60)
     }
 
     func testImportRequiresOptIn() throws {

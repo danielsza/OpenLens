@@ -205,7 +205,48 @@ public final class ApertureLibraryWriter {
                   .text(dest.lastPathComponent), .text(masterUuid), .text(projectUuid),
                   .real(appleDate), .integer(Int64(width)), .integer(Int64(height)), .real(appleDate)])
 
+        // Best-effort: generate a cached thumbnail + a Version-1.apversion plist
+        // (EXIF + proxy paths) so imported photos browse fast and show metadata.
+        try? writeImportDerivatives(masterURL: dest, masterUuid: masterUuid,
+                                    versionUuid: versionUuid, name: name,
+                                    projectUuid: projectUuid, datePath: datePath)
         return versionUuid
+    }
+
+    private func writeImportDerivatives(masterURL: URL, masterUuid: String,
+                                        versionUuid: String, name: String,
+                                        projectUuid: String, datePath: String) throws {
+        let fm = FileManager.default
+
+        // Thumbnail under Thumbnails/<date>/<thumbUuid>/thumb_<name>_1024.jpg
+        let thumbUuid = UUID().uuidString
+        let thumbDir = libraryURL.appendingPathComponent("Thumbnails")
+            .appendingPathComponent(datePath).appendingPathComponent(thumbUuid)
+        try fm.createDirectory(at: thumbDir, withIntermediateDirectories: true)
+        let thumbName = "thumb_\(name)_1024.jpg"
+        let thumbSize = ImageLoader.writeJPEGThumbnail(
+            from: masterURL, to: thumbDir.appendingPathComponent(thumbName), maxPixel: 1024)
+        let thumbRel = "\(datePath)/\(thumbUuid)/\(thumbName)"
+
+        // Version-1.apversion plist beside the master's version folder.
+        var plist: [String: Any] = [
+            "uuid": versionUuid, "name": name, "versionNumber": 1,
+            "masterUuid": masterUuid, "projectUuid": projectUuid,
+            "mainRating": 0, "isFlagged": false,
+            "exifProperties": ImageLoader.exifSummary(at: masterURL),
+            "iptcProperties": ["StarRating": "0"]
+        ]
+        if let s = thumbSize {
+            plist["imageProxyState"] = [
+                "thumbnailPath": thumbRel, "miniThumbnailPath": thumbRel,
+                "thumbnailWidth": Int(s.width), "thumbnailHeight": Int(s.height)
+            ]
+        }
+        let versionDir = libraryURL.appendingPathComponent("Database/Versions")
+            .appendingPathComponent(datePath).appendingPathComponent(masterUuid)
+        try fm.createDirectory(at: versionDir, withIntermediateDirectories: true)
+        let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .binary, options: 0)
+        try data.write(to: versionDir.appendingPathComponent("Version-1.apversion"))
     }
 
     // MARK: - Trash (reversible)

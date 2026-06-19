@@ -172,6 +172,12 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   is still TODO (reader falls back to decoding the master). Tested end-to-end on
   a created library.
 
+- **2026-06-19** Import now also generates a **cached JPEG thumbnail** and a
+  minimal **Version-1.apversion** (real EXIF via `ImageLoader.exifSummary` +
+  proxy paths), so imported photos browse fast and show metadata. Reader's
+  `parseMetadata` now prefers a direct `FNumber` (how we write imports) over the
+  APEX `ApertureValue` (how Aperture stored it).
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.
