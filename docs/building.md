@@ -1,5 +1,25 @@
 # Building OpenLens
 
+## Download a prebuilt app (no Xcode needed)
+
+Every push to `main` runs CI, which builds and uploads artifacts:
+
+1. Open the repo's **Actions** tab → the latest green run → **Artifacts**.
+2. Download **OpenLens-app** (a zipped `OpenLens.app`) and/or **openlens-cli**.
+3. Unzip. Because the build is **not notarized**, Gatekeeper will block the
+   first launch — right-click the app ▸ **Open** (then **Open** again), or run:
+   ```
+   xattr -dr com.apple.quarantine /path/to/OpenLens.app
+   ```
+4. For the CLI: `chmod +x openlens-cli && ./openlens-cli <library.aplibrary> --list`.
+
+> The bundle is ad-hoc signed so it launches locally; it is not signed for
+> distribution to other Macs yet (that's Phase 6).
+
+---
+
+
+
 ## Requirements
 - macOS 13 (Ventura) or later
 - Xcode 15+ (for the Swift 5.9 toolchain)

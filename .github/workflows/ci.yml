@@ -20,3 +20,51 @@ jobs:
         env:
           OPENLENS_TEST_LIBRARY: ${{ github.workspace }}/Tests/Fixtures/Mini.aplibrary
         run: swift test -v
+
+  package:
+    # Build release binaries and a runnable .app, and upload them as artifacts.
+    needs: build-and-test
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Release build
+        run: swift build -c release
+      - name: Assemble OpenLens.app
+        run: |
+          set -eux
+          BIN="$(swift build -c release --show-bin-path)"
+          APP="OpenLens.app"
+          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+          cp "$BIN/OpenLensApp" "$APP/Contents/MacOS/OpenLens"
+          cp "$BIN/openlens-cli" "$APP/Contents/MacOS/openlens-cli"
+          cat > "$APP/Contents/Info.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleName</key><string>OpenLens</string>
+            <key>CFBundleDisplayName</key><string>OpenLens</string>
+            <key>CFBundleIdentifier</key><string>com.openlens.app</string>
+            <key>CFBundleExecutable</key><string>OpenLens</string>
+            <key>CFBundlePackageType</key><string>APPL</string>
+            <key>CFBundleShortVersionString</key><string>0.1.0</string>
+            <key>CFBundleVersion</key><string>1</string>
+            <key>LSMinimumSystemVersion</key><string>13.0</string>
+            <key>NSHighResolutionCapable</key><true/>
+            <key>NSPrincipalClass</key><string>NSApplication</string>
+          </dict>
+          </plist>
+          PLIST
+          # Ad-hoc sign so it launches locally (still unsigned for distribution).
+          codesign --force --deep --sign - "$APP" || true
+          ditto -c -k --keepParent "$APP" "OpenLens-app.zip"
+      - name: Upload .app bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenLens-app
+          path: OpenLens-app.zip
+      - name: Upload CLI binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: openlens-cli
+          path: ${{ github.workspace }}/.build/release/openlens-cli
