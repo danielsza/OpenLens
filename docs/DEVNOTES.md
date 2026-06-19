@@ -196,6 +196,10 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
 - **2026-06-19** Browser sort (Date/Name/Rating/File Name, asc/desc) —
   `[Photo].sorted(by:)` + filter-bar control. + test.
 
+- **2026-06-19** Multi-selection: Cmd/Shift click, batch rating/flag/label/reject
+  (control bar + keyboard apply to the whole selection), batch move-to-trash,
+  selection count in the status bar.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

@@ -11,7 +11,7 @@ struct ControlBar: View {
             if let photo = store.selectedPhoto {
                 // Reject (rating -1)
                 Button {
-                    store.setRating(photo.version.rating < 0 ? 0 : -1, for: photo)
+                    store.setRatingForSelection(photo.version.rating < 0 ? 0 : -1)
                 } label: {
                     Image(systemName: photo.version.rating < 0 ? "xmark.circle.fill" : "xmark.circle")
                         .foregroundStyle(photo.version.rating < 0 ? .red : Theme.textSecondary)
@@ -25,13 +25,13 @@ struct ControlBar: View {
                         Image(systemName: star <= photo.version.rating ? "star.fill" : "star")
                             .foregroundStyle(star <= photo.version.rating ? .yellow : Theme.textSecondary)
                             .onTapGesture {
-                                store.setRating(photo.version.rating == star ? 0 : star, for: photo)
+                                store.setRatingForSelection(photo.version.rating == star ? 0 : star)
                             }
                     }
                 }
 
                 Button {
-                    store.toggleFlag(for: photo)
+                    store.setFlagForSelection(!photo.version.isFlagged)
                 } label: {
                     Image(systemName: photo.version.isFlagged ? "flag.fill" : "flag")
                         .foregroundStyle(photo.version.isFlagged ? .orange : Theme.textSecondary)
@@ -52,7 +52,7 @@ struct ControlBar: View {
                                 Circle().strokeBorder(.white,
                                     lineWidth: photo.version.colorLabel == label.rawValue ? 2 : 0)
                             )
-                            .onTapGesture { store.setColorLabel(label.rawValue, for: photo) }
+                            .onTapGesture { store.setColorLabelForSelection(label.rawValue) }
                             .help(label.displayName)
                     }
                 }

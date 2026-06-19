@@ -34,7 +34,7 @@ struct ContentView: View {
             duplicateSelected()
         }
         .onReceive(NotificationCenter.default.publisher(for: .moveToTrashRequested)) { _ in
-            if let p = store.selectedPhoto { store.moveToTrash(p) }
+            store.moveSelectionToTrash()
         }
         .onReceive(NotificationCenter.default.publisher(for: .restoreRequested)) { _ in
             if let p = store.selectedPhoto { store.restoreFromTrash(p) }
@@ -79,20 +79,16 @@ struct ContentView: View {
     private var keyboardShortcuts: some View {
         Group {
             ForEach(0...5, id: \.self) { n in
-                Button("") {
-                    if let p = store.selectedPhoto { store.setRating(n, for: p) }
-                }
-                .keyboardShortcut(KeyEquivalent(Character("\(n)")), modifiers: [])
+                Button("") { store.setRatingForSelection(n) }
+                    .keyboardShortcut(KeyEquivalent(Character("\(n)")), modifiers: [])
             }
             Button("") {
-                if let p = store.selectedPhoto { store.toggleFlag(for: p) }
+                store.setFlagForSelection(!(store.selectedPhoto?.version.isFlagged ?? false))
             }
             .keyboardShortcut("/", modifiers: [])
             // 9 = Reject (rating -1), as in Aperture.
-            Button("") {
-                if let p = store.selectedPhoto { store.setRating(-1, for: p) }
-            }
-            .keyboardShortcut("9", modifiers: [])
+            Button("") { store.setRatingForSelection(-1) }
+                .keyboardShortcut("9", modifiers: [])
         }
         .opacity(0)
         .frame(width: 0, height: 0)
@@ -148,6 +144,9 @@ struct ContentView: View {
 
     private var statusText: String {
         let photos = store.visiblePhotos
+        if store.selectedPhotoIDs.count > 1 {
+            return "\(store.selectedPhotoIDs.count) selected — \(photos.count) displayed"
+        }
         if let id = store.selectedPhotoID,
            let idx = photos.firstIndex(where: { $0.id == id }) {
             return "\(idx + 1) of \(photos.count) — \(photos.count) displayed"

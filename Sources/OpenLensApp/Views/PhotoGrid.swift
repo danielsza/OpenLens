@@ -10,7 +10,7 @@ struct PhotoThumbnail: View {
     var showCaption: Bool = true
 
     @State private var image: NSImage?
-    private var isSelected: Bool { photo.id == store.selectedPhotoID }
+    private var isSelected: Bool { store.isSelected(photo.id) }
 
     var body: some View {
         VStack(spacing: 4) {
@@ -50,7 +50,12 @@ struct PhotoThumbnail: View {
             }
         }
         .contentShape(Rectangle())
-        .onTapGesture { store.selectedPhotoID = photo.id }
+        .onTapGesture {
+            let mods = NSEvent.modifierFlags
+            store.handleTap(photo,
+                            command: mods.contains(.command),
+                            shift: mods.contains(.shift))
+        }
         .task(id: "\(photo.id)-\(Int(size))") { await load() }
     }
 

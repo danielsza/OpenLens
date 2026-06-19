@@ -13,7 +13,8 @@ final class LibraryStore: ObservableObject {
     @Published var selectedProjectID: String?
     @Published var selectedAlbumID: String?
     @Published var selectedSource: LibrarySource?
-    @Published var selectedPhotoID: String?
+    @Published var selectedPhotoID: String?          // primary/anchor selection
+    @Published var selectedPhotoIDs: Set<String> = [] // full multi-selection
     @Published var errorMessage: String?
 
     /// Precomputed album membership (album uuid -> photos).
@@ -73,18 +74,70 @@ final class LibraryStore: ObservableObject {
         selectedSource = nil
         selectedAlbumID = nil
         selectedProjectID = id
+        clearSelection()
     }
 
     func selectAlbum(_ id: String?) {
         selectedSource = nil
         selectedProjectID = nil
         selectedAlbumID = id
+        clearSelection()
     }
 
     func selectSource(_ source: LibrarySource?) {
         selectedProjectID = nil
         selectedAlbumID = nil
         selectedSource = source
+        clearSelection()
+    }
+
+    private func clearSelection() {
+        selectedPhotoID = nil
+        selectedPhotoIDs = []
+    }
+
+    // MARK: - Multi-selection
+
+    /// True if a photo should appear selected (in the multi-set, or the lone
+    /// primary when the set is empty).
+    func isSelected(_ id: String) -> Bool {
+        selectedPhotoIDs.contains(id) || (selectedPhotoIDs.isEmpty && id == selectedPhotoID)
+    }
+
+    /// Handles a thumbnail click with optional Command (toggle) / Shift (range).
+    func handleTap(_ photo: Photo, command: Bool, shift: Bool) {
+        if command {
+            if selectedPhotoIDs.contains(photo.id) { selectedPhotoIDs.remove(photo.id) }
+            else { selectedPhotoIDs.insert(photo.id) }
+            selectedPhotoID = photo.id
+        } else if shift, let anchor = selectedPhotoID,
+                  let ai = visiblePhotos.firstIndex(where: { $0.id == anchor }),
+                  let ti = visiblePhotos.firstIndex(where: { $0.id == photo.id }) {
+            let range = ai <= ti ? ai...ti : ti...ai
+            selectedPhotoIDs = Set(visiblePhotos[range].map { $0.id })
+            selectedPhotoID = photo.id
+        } else {
+            selectedPhotoID = photo.id
+            selectedPhotoIDs = [photo.id]
+        }
+    }
+
+    /// The photos a batch action should affect (the multi-set, else the primary).
+    private func selectionPhotos() -> [Photo] {
+        let ids = selectedPhotoIDs.isEmpty
+            ? Set([selectedPhotoID].compactMap { $0 })
+            : selectedPhotoIDs
+        return photos.filter { ids.contains($0.id) }
+    }
+
+    func setRatingForSelection(_ rating: Int) {
+        selectionPhotos().forEach { setRating(rating, for: $0) }
+    }
+    func setFlagForSelection(_ flagged: Bool) {
+        selectionPhotos().forEach { if $0.version.isFlagged != flagged { toggleFlag(for: $0) } }
+    }
+    func setColorLabelForSelection(_ label: Int) {
+        selectionPhotos().forEach { setColorLabel(label, for: $0) }
     }
 
     var selectedPhoto: Photo? {
@@ -123,6 +176,14 @@ final class LibraryStore: ObservableObject {
     func moveToTrash(_ photo: Photo) {
         guard let w = makeWriter() else { return }
         do { try w.moveToTrash(versionUuid: photo.version.id); reload() }
+        catch { errorMessage = "Couldn't move to trash: \(error)" }
+    }
+
+    /// Moves the whole current selection to the trash.
+    func moveSelectionToTrash() {
+        let ids = selectedPhotoIDs.isEmpty ? [selectedPhotoID].compactMap { $0 } : Array(selectedPhotoIDs)
+        guard !ids.isEmpty, let w = makeWriter() else { return }
+        do { for id in ids { try w.moveToTrash(versionUuid: id) }; reload() }
         catch { errorMessage = "Couldn't move to trash: \(error)" }
     }
 
@@ -206,6 +267,7 @@ final class LibraryStore: ObservableObject {
         let idx = photos.firstIndex { $0.id == selectedPhotoID } ?? 0
         let next = max(0, min(photos.count - 1, idx + delta))
         selectedPhotoID = photos[next].id
+        selectedPhotoIDs = [photos[next].id]
     }
 
     func toggleFlag(for photo: Photo) {
