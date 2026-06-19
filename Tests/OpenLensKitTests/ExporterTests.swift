@@ -65,6 +65,11 @@ final class ExporterTests: XCTestCase {
         XCTAssertEqual(jpg.pathExtension, "jpg")
         let decoded = try XCTUnwrap(ImageLoader.cgImage(at: jpg, maxPixelSize: 400))
         XCTAssertLessThanOrEqual(max(decoded.width, decoded.height), 240)
+
+        // Filename suffix is applied.
+        let suffixed = try exporter.export(photo, to: dir,
+            settings: ExportSettings(format: .jpeg, maxPixelSize: 100, fileNameSuffix: "_web"))
+        XCTAssertTrue(suffixed.deletingPathExtension().lastPathComponent.hasSuffix("_web"))
     }
 
     func testBatchExportAndUniqueNaming() throws {

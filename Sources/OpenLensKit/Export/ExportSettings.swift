@@ -14,14 +14,17 @@ public struct ExportSettings {
     /// Optional DPI written into the file metadata.
     public var dpi: Double?
     public var watermark: Watermark?
+    /// Appended to the base file name (e.g. "_web") before the extension.
+    public var fileNameSuffix: String = ""
 
     public init(format: Format = .jpeg, maxPixelSize: Int = 0, jpegQuality: Double = 0.9,
-                dpi: Double? = nil, watermark: Watermark? = nil) {
+                dpi: Double? = nil, watermark: Watermark? = nil, fileNameSuffix: String = "") {
         self.format = format
         self.maxPixelSize = maxPixelSize
         self.jpegQuality = jpegQuality
         self.dpi = dpi
         self.watermark = watermark
+        self.fileNameSuffix = fileNameSuffix
     }
 
     var fileExtension: String {
@@ -98,7 +101,8 @@ public extension Exporter {
         }
         guard let cg = base else { throw ExportError.decodeFailed(photo.version.name) }
         let rendered = Exporter.applyWatermark(cg, settings.watermark)
-        let dest = uniqueURL(in: directory, base: photo.version.name, ext: settings.fileExtension)
+        let dest = uniqueURL(in: directory, base: photo.version.name + settings.fileNameSuffix,
+                             ext: settings.fileExtension)
         guard Exporter.encode(rendered, to: dest, settings: settings) else {
             throw ExportError.encodeFailed(photo.version.name)
         }
