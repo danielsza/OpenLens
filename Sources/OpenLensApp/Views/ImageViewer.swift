@@ -22,7 +22,7 @@ struct ImageViewer: View {
                 }
             } else {
                 Text("Select a photo")
-                    .foregroundStyle(Theme.textSecondary)
+                    .foregroundStyle(Theme.captionOnDark)
             }
         }
         .task(id: store.selectedPhotoID) { await load() }

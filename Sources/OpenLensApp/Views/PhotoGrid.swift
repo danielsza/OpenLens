@@ -34,7 +34,7 @@ struct PhotoThumbnail: View {
                     ForEach(1...5, id: \.self) { star in
                         Image(systemName: star <= photo.version.rating ? "star.fill" : "star")
                             .font(.system(size: 7))
-                            .foregroundStyle(star <= photo.version.rating ? .yellow : Theme.textSecondary)
+                            .foregroundStyle(star <= photo.version.rating ? .yellow : Theme.captionOnDarkDim)
                     }
                     if photo.version.isFlagged {
                         Image(systemName: "flag.fill").font(.system(size: 7)).foregroundStyle(.orange)
@@ -45,7 +45,7 @@ struct PhotoThumbnail: View {
                 }
                 Text(photo.version.name)
                     .font(.caption2)
-                    .foregroundStyle(isSelected ? Theme.textPrimary : Theme.textSecondary)
+                    .foregroundStyle(isSelected ? Color.white : Theme.captionOnDark)
                     .lineLimit(1)
             }
         }
@@ -73,7 +73,7 @@ struct GridBrowser: View {
             }
             .padding(16)
         }
-        .background(Theme.appBackground)
+        .background(Theme.browserBackground)
     }
 }
 
@@ -92,7 +92,7 @@ struct Filmstrip: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
             }
-            .background(Theme.panel)
+            .background(Theme.browserBackground)
             .onChange(of: store.selectedPhotoID) { id in
                 guard let id else { return }
                 withAnimation { proxy.scrollTo(id, anchor: .center) }

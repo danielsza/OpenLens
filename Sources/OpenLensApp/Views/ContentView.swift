@@ -15,7 +15,6 @@ struct ContentView: View {
                 .frame(minWidth: 270, idealWidth: 300, maxWidth: 380)
         }
         .background(Theme.appBackground)
-        .preferredColorScheme(.dark)
         .toolbar { toolbarContent }
         .overlay {
             if store.library == nil {

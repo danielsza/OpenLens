@@ -3,14 +3,24 @@ import SwiftUI
 /// Aperture-inspired dark palette. Aperture used a near-black charcoal UI so
 /// photos pop; these greys approximate it.
 enum Theme {
-    static let appBackground = Color(red: 0.11, green: 0.11, blue: 0.12)
-    static let viewerBackground = Color(red: 0.08, green: 0.08, blue: 0.09)
-    static let panel = Color(red: 0.15, green: 0.15, blue: 0.16)
-    static let panelRaised = Color(red: 0.19, green: 0.19, blue: 0.20)
-    static let hairline = Color.white.opacity(0.08)
-    static let selection = Color.accentColor
-    static let textPrimary = Color.white.opacity(0.92)
-    static let textSecondary = Color.white.opacity(0.55)
+    /// Aperture's chrome was a medium light-grey (toolbars, sidebar, inspector,
+    /// control bar). The photo browser/viewer area is a darker neutral grey.
+    static let chrome = Color(white: 0.62)
+    static let appBackground = Color(white: 0.62)
+    static let panel = Color(white: 0.62)
+    static let panelRaised = Color(white: 0.66)
+    /// Dark neutral grey behind photos (viewer + browser + filmstrip).
+    static let viewerBackground = Color(white: 0.40)
+    static let browserBackground = Color(white: 0.43)
+    static let hairline = Color.black.opacity(0.18)
+    /// Selected thumbnails get a bright border, as in Aperture.
+    static let selection = Color.white
+    /// Text on the light chrome (dark).
+    static let textPrimary = Color(white: 0.12)
+    static let textSecondary = Color(white: 0.32)
+    /// Text/captions over the dark photo area (light).
+    static let captionOnDark = Color.white.opacity(0.85)
+    static let captionOnDarkDim = Color.white.opacity(0.45)
 }
 
 /// The three browser layouts, matching Aperture's view modes.
