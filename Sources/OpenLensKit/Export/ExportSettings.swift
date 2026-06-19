@@ -45,17 +45,29 @@ public struct ExportSettings {
 /// A text or image watermark drawn onto exported (rendered) images.
 public struct Watermark {
     public enum Position: String, CaseIterable {
-        case bottomRight, bottomLeft, topRight, topLeft, center
+        case bottomCenter, bottomRight, bottomLeft, topCenter, topRight, topLeft, center
+
+        public var displayName: String {
+            switch self {
+            case .bottomCenter: return "Bottom Center"
+            case .bottomRight: return "Bottom Right"
+            case .bottomLeft: return "Bottom Left"
+            case .topCenter: return "Top Center"
+            case .topRight: return "Top Right"
+            case .topLeft: return "Top Left"
+            case .center: return "Center"
+            }
+        }
     }
     public var text: String?
     public var imageURL: URL?
     public var opacity: Double = 0.5
     /// Watermark width as a fraction of the image width (image watermarks).
     public var scale: Double = 0.25
-    public var position: Position = .bottomRight
+    public var position: Position = .bottomCenter
 
     public init(text: String? = nil, imageURL: URL? = nil, opacity: Double = 0.5,
-                scale: Double = 0.25, position: Position = .bottomRight) {
+                scale: Double = 0.25, position: Position = .bottomCenter) {
         self.text = text
         self.imageURL = imageURL
         self.opacity = opacity
@@ -157,11 +169,13 @@ public extension Exporter {
                                  in image: CGSize, margin: CGFloat) -> CGPoint {
         // CoreGraphics origin is bottom-left.
         switch p {
-        case .bottomLeft:  return CGPoint(x: margin, y: margin)
-        case .bottomRight: return CGPoint(x: image.width - size.width - margin, y: margin)
-        case .topLeft:     return CGPoint(x: margin, y: image.height - size.height - margin)
-        case .topRight:    return CGPoint(x: image.width - size.width - margin, y: image.height - size.height - margin)
-        case .center:      return CGPoint(x: (image.width - size.width) / 2, y: (image.height - size.height) / 2)
+        case .bottomCenter: return CGPoint(x: (image.width - size.width) / 2, y: margin)
+        case .bottomLeft:   return CGPoint(x: margin, y: margin)
+        case .bottomRight:  return CGPoint(x: image.width - size.width - margin, y: margin)
+        case .topCenter:    return CGPoint(x: (image.width - size.width) / 2, y: image.height - size.height - margin)
+        case .topLeft:      return CGPoint(x: margin, y: image.height - size.height - margin)
+        case .topRight:     return CGPoint(x: image.width - size.width - margin, y: image.height - size.height - margin)
+        case .center:       return CGPoint(x: (image.width - size.width) / 2, y: (image.height - size.height) / 2)
         }
     }
 

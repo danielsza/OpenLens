@@ -12,7 +12,7 @@ struct ExportSheet: View {
     @State private var quality: Double = 0.9
     @State private var dpiText: String = ""
     @State private var watermarkText: String = ""
-    @State private var watermarkPosition: Watermark.Position = .bottomRight
+    @State private var watermarkPosition: Watermark.Position = .bottomCenter
     @State private var watermarkOpacity: Double = 0.5
     @State private var selectionOnly = true
 
@@ -53,7 +53,7 @@ struct ExportSheet: View {
                     Text("Watermark").font(.headline)
                     TextField("Text (leave blank for none)", text: $watermarkText)
                     Picker("Position", selection: $watermarkPosition) {
-                        ForEach(Watermark.Position.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                        ForEach(Watermark.Position.allCases, id: \.self) { Text($0.displayName).tag($0) }
                     }
                     HStack {
                         Text("Opacity")
