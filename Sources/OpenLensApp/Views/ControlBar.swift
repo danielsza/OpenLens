@@ -9,6 +9,16 @@ struct ControlBar: View {
     var body: some View {
         HStack(spacing: 16) {
             if let photo = store.selectedPhoto {
+                // Reject (rating -1)
+                Button {
+                    store.setRating(photo.version.rating < 0 ? 0 : -1, for: photo)
+                } label: {
+                    Image(systemName: photo.version.rating < 0 ? "xmark.circle.fill" : "xmark.circle")
+                        .foregroundStyle(photo.version.rating < 0 ? .red : Theme.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .help("Reject")
+
                 // Rating
                 HStack(spacing: 2) {
                     ForEach(1...5, id: \.self) { star in

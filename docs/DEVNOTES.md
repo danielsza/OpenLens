@@ -151,6 +151,10 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   commands; Close returns to the chooser without quitting. (New-library
   creation still TODO — we can't author an `.aplibrary` from scratch yet.)
 
+- **2026-06-19** Sidebar **Library** section (Photos/Flagged/Rejected/Trash smart
+  sources) like Aperture. Reject now supported (rating -1; writer clamp -1...5,
+  `9` key, control-bar reject button); populates the Rejected source.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

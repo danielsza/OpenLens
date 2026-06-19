@@ -72,6 +72,11 @@ struct ContentView: View {
                 if let p = store.selectedPhoto { store.toggleFlag(for: p) }
             }
             .keyboardShortcut("/", modifiers: [])
+            // 9 = Reject (rating -1), as in Aperture.
+            Button("") {
+                if let p = store.selectedPhoto { store.setRating(-1, for: p) }
+            }
+            .keyboardShortcut("9", modifiers: [])
         }
         .opacity(0)
         .frame(width: 0, height: 0)

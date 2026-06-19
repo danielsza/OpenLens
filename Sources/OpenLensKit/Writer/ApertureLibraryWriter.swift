@@ -328,5 +328,6 @@ public final class ApertureLibraryWriter {
         try out.write(to: url, options: .atomic)
     }
 
-    private func clampRating(_ r: Int) -> Int { max(0, min(5, r)) }
+    // Aperture ratings run -1 (Rejected) through 5 stars.
+    private func clampRating(_ r: Int) -> Int { max(-1, min(5, r)) }
 }
