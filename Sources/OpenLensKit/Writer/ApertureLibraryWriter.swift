@@ -142,6 +142,41 @@ public final class ApertureLibraryWriter {
         }
     }
 
+    /// Duplicates a version (same master, new version row), returning the new
+    /// version's uuid. The copy starts unrated/unflagged with no adjustments,
+    /// like Aperture's "Duplicate Version".
+    @discardableResult
+    public func duplicateVersion(_ uuid: String) throws -> String {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+        let rows = try db.query("""
+            SELECT name, fileName, masterUuid, projectUuid, imageDate, masterWidth,
+                   masterHeight, rotation, stackUuid, exifLatitude, exifLongitude
+            FROM RKVersion WHERE uuid = ?
+            """, [.text(uuid)])
+        guard let r = rows.first, let masterUuid = r["masterUuid"]?.stringValue else {
+            throw WriteError.versionNotFound(uuid)
+        }
+        let nextVer = (try db.query(
+            "SELECT COALESCE(MAX(versionNumber), 0) + 1 AS n FROM RKVersion WHERE masterUuid = ?",
+            [.text(masterUuid)]).first?["n"]?.intValue) ?? 2
+        let newUuid = UUID().uuidString
+        let mid = try nextModelId("RKVersion", db)
+        func v(_ k: String) -> SQLiteDatabase.Value { r[k] ?? .null }
+        try db.execute("""
+            INSERT INTO RKVersion(modelId, uuid, name, fileName, versionNumber, masterUuid, projectUuid,
+                imageDate, mainRating, isFlagged, isOriginal, isEditable, colorLabelIndex,
+                masterWidth, masterHeight, rotation, hasAdjustments, hasKeywords, createDate,
+                isInTrash, showInLibrary, exifLatitude, exifLongitude)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 1, -1, ?, ?, ?, 0, 0, ?, 0, 1, ?, ?)
+            """, [.integer(Int64(mid)), .text(newUuid), v("name"), v("fileName"),
+                  .integer(Int64(nextVer)), .text(masterUuid), v("projectUuid"), v("imageDate"),
+                  v("masterWidth"), v("masterHeight"), v("rotation"),
+                  .real(Date().timeIntervalSinceReferenceDate),
+                  v("exifLatitude"), v("exifLongitude")])
+        return newUuid
+    }
+
     // MARK: - Import
 
     /// Imports an image file into a project as a managed master (copies the file

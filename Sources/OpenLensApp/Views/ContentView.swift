@@ -30,6 +30,9 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .closeLibraryRequested)) { _ in
             store.closeLibrary()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .duplicateVersionRequested)) { _ in
+            duplicateSelected()
+        }
         .onAppear { autoOpenIfNeeded() }
         .alert("Library error",
                isPresented: Binding(get: { store.errorMessage != nil },
@@ -197,6 +200,16 @@ struct ContentView: View {
             store.reload()
             store.selectAlbum(uuid)
         } catch { store.errorMessage = "Couldn't create album: \(error)" }
+    }
+
+    private func duplicateSelected() {
+        guard let lib = store.library, let photo = store.selectedPhoto else { return }
+        do {
+            let writer = ApertureLibraryWriter(libraryURL: lib.url, allowWrites: true)
+            let newUuid = try writer.duplicateVersion(photo.version.id)
+            store.reload()
+            store.selectedPhotoID = newUuid
+        } catch { store.errorMessage = "Couldn't duplicate version: \(error)" }
     }
 
     private func importPhotos() {

@@ -182,6 +182,9 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   (`PhotoVersion.latitude/longitude`), shown in the Info tab; extracted from
   EXIF on import; added the columns to the fixture + creator schema.
 
+- **2026-06-19** Duplicate Version: `duplicateVersion` writer method (new version
+  row sharing the master) + Photo ▸ Duplicate Version (⌘D); tested.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

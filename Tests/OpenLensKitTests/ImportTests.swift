@@ -61,6 +61,28 @@ final class ImportTests: XCTestCase {
         XCTAssertEqual(meta.pixelHeight, 60)
     }
 
+    func testDuplicateVersion() throws {
+        let libURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("OpenLens-dup-\(UUID().uuidString).aplibrary")
+        defer { try? FileManager.default.removeItem(at: libURL) }
+        let created = try ApertureLibraryCreator.createLibrary(at: libURL, firstProjectNamed: "P")
+        let projectUuid = try XCTUnwrap(created.projects().first?.id)
+        let source = FileManager.default.temporaryDirectory.appendingPathComponent("dup-\(UUID().uuidString).png")
+        defer { try? FileManager.default.removeItem(at: source) }
+        try makePNG(source, width: 40, height: 30)
+
+        let writer = ApertureLibraryWriter(libraryURL: libURL, allowWrites: true)
+        let original = try writer.importImage(at: source, intoProject: projectUuid)
+        let dup = try writer.duplicateVersion(original)
+        XCTAssertNotEqual(dup, original)
+
+        let lib = try ApertureLibrary(url: libURL)
+        let photos = try lib.photos()
+        XCTAssertEqual(photos.count, 2)                       // both versions browse
+        let masters = Set(photos.map { $0.master.id })
+        XCTAssertEqual(masters.count, 1)                      // sharing one master
+    }
+
     func testImportRequiresOptIn() throws {
         let libURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("OpenLens-import-\(UUID().uuidString).aplibrary")

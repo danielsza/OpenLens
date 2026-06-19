@@ -30,12 +30,19 @@ struct OpenLensApp: App {
                 }
                 .keyboardShortcut("w", modifiers: [.command, .shift])
             }
+            CommandMenu("Photo") {
+                Button("Duplicate Version") {
+                    NotificationCenter.default.post(name: .duplicateVersionRequested, object: nil)
+                }
+                .keyboardShortcut("d")
+            }
         }
     }
 }
 
 extension Notification.Name {
     static let newLibraryRequested = Notification.Name("newLibraryRequested")
+    static let duplicateVersionRequested = Notification.Name("duplicateVersionRequested")
     static let openLibraryRequested = Notification.Name("openLibraryRequested")
     static let closeLibraryRequested = Notification.Name("closeLibraryRequested")
 }
