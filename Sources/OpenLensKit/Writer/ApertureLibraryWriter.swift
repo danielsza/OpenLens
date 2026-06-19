@@ -86,6 +86,62 @@ public final class ApertureLibraryWriter {
                           iptcStarRating: nil)
     }
 
+    // MARK: - Structure (projects / albums)
+
+    /// Creates a new project under the "Projects" container and returns its uuid.
+    @discardableResult
+    public func createProject(named name: String) throws -> String {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+        let mid = try nextModelId("RKFolder", db)
+        let uuid = UUID().uuidString
+        let parentPath = (try db.query(
+            "SELECT folderPath FROM RKFolder WHERE uuid = 'AllProjectsItem'")
+            .first?["folderPath"]?.stringValue) ?? "1/2/"
+        let path = "\(parentPath)\(mid)/"
+        try db.execute("""
+            INSERT INTO RKFolder(modelId, uuid, folderType, name, parentFolderUuid,
+                versionCount, folderPath, createDate, isInTrash)
+            VALUES (?, ?, 2, ?, 'AllProjectsItem', 0, ?, ?, 0)
+            """, [.integer(Int64(mid)), .text(uuid), .text(name), .text(path),
+                  .real(Date().timeIntervalSinceReferenceDate)])
+        return uuid
+    }
+
+    /// Creates a new regular (user) album and returns its uuid.
+    @discardableResult
+    public func createAlbum(named name: String, inFolderUuid folder: String = "LibraryFolder") throws -> String {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+        let mid = try nextModelId("RKAlbum", db)
+        let uuid = UUID().uuidString
+        try db.execute("""
+            INSERT INTO RKAlbum(modelId, uuid, name, albumType, albumSubclass,
+                folderUuid, isMagic, isInTrash)
+            VALUES (?, ?, ?, 1, 3, ?, 0, 0)
+            """, [.integer(Int64(mid)), .text(uuid), .text(name), .text(folder)])
+        return uuid
+    }
+
+    /// Adds a version to a regular album (no-op if already a member).
+    public func addVersion(_ versionUuid: String, toAlbumUuid albumUuid: String) throws {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+        let versionId = try versionModelId(versionUuid, db)
+        guard let albumId = try db.query(
+            "SELECT modelId FROM RKAlbum WHERE uuid = ?", [.text(albumUuid)])
+            .first?["modelId"]?.intValue else { return }
+        let existing = try db.query(
+            "SELECT 1 FROM RKAlbumVersion WHERE versionId = ? AND albumId = ?",
+            [.integer(Int64(versionId)), .integer(Int64(albumId))])
+        if existing.isEmpty {
+            let mid = try nextModelId("RKAlbumVersion", db)
+            try db.execute(
+                "INSERT INTO RKAlbumVersion(modelId, versionId, albumId) VALUES (?, ?, ?)",
+                [.integer(Int64(mid)), .integer(Int64(versionId)), .integer(Int64(albumId))])
+        }
+    }
+
     // MARK: - Trash (reversible)
 
     /// Moves a version to the trash (sets `isInTrash`). Reversible with

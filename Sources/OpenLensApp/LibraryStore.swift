@@ -108,6 +108,11 @@ final class LibraryStore: ObservableObject {
 
     /// Closes the current library without quitting the app (returns to the
     /// "no library open" state so the user can open or switch).
+    /// Reloads the current library from disk (after a structural change).
+    func reload() {
+        if let url = library?.url { open(url: url) }
+    }
+
     func closeLibrary() {
         library = nil
         projects = []

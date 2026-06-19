@@ -139,6 +139,15 @@ struct ContentView: View {
             Button { openLibrary() } label: { Label("Open Library", systemImage: "folder") }
         }
         ToolbarItem(placement: .automatic) {
+            Menu {
+                Button("New Project…") { createProject() }
+                Button("New Album…") { createAlbum() }
+            } label: {
+                Label("New", systemImage: "plus")
+            }
+            .disabled(store.library == nil)
+        }
+        ToolbarItem(placement: .automatic) {
             Toggle("Save edits", isOn: $store.writesEnabled)
                 .help("When on, ratings, flags and labels are written back to the library on disk.")
         }
@@ -164,6 +173,39 @@ struct ContentView: View {
         } else if !store.openLastIfAvailable() {
             openLibrary()
         }
+    }
+
+    private func createProject() {
+        guard let lib = store.library, let name = promptForName(title: "New Project", placeholder: "Project name") else { return }
+        do {
+            let writer = ApertureLibraryWriter(libraryURL: lib.url, allowWrites: true)
+            let uuid = try writer.createProject(named: name)
+            store.reload()
+            store.selectProject(uuid)
+        } catch { store.errorMessage = "Couldn't create project: \(error)" }
+    }
+
+    private func createAlbum() {
+        guard let lib = store.library, let name = promptForName(title: "New Album", placeholder: "Album name") else { return }
+        do {
+            let writer = ApertureLibraryWriter(libraryURL: lib.url, allowWrites: true)
+            let uuid = try writer.createAlbum(named: name)
+            store.reload()
+            store.selectAlbum(uuid)
+        } catch { store.errorMessage = "Couldn't create album: \(error)" }
+    }
+
+    private func promptForName(title: String, placeholder: String) -> String? {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.addButton(withTitle: "Create")
+        alert.addButton(withTitle: "Cancel")
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
+        field.placeholderString = placeholder
+        alert.accessoryView = field
+        guard alert.runModal() == .alertFirstButtonReturn else { return nil }
+        let value = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
     }
 
     private func newLibrary() {

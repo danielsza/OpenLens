@@ -162,6 +162,10 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   tables OpenLens uses, not all ~33 of Aperture's — fine for OpenLens; full
   Aperture-authoring is a later refinement.
 
+- **2026-06-19** Structure writes: `createProject`, `createAlbum`,
+  `addVersion(_:toAlbumUuid:)` on the writer (+ tests on a created library).
+  Wired to a toolbar "+" menu (New Project / New Album) with a name prompt.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.
