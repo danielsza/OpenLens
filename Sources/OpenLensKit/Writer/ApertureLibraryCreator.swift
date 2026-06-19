@@ -80,7 +80,7 @@ public struct ApertureLibraryCreator {
               isFlagged INTEGER, isOriginal INTEGER, isEditable INTEGER, colorLabelIndex INTEGER,
               masterWidth INTEGER, masterHeight INTEGER, processedWidth INTEGER, processedHeight INTEGER,
               rotation INTEGER, hasAdjustments INTEGER, hasKeywords INTEGER, createDate timestamp,
-              isInTrash INTEGER, showInLibrary INTEGER)
+              isInTrash INTEGER, showInLibrary INTEGER, exifLatitude REAL, exifLongitude REAL)
             """,
             """
             CREATE TABLE RKAlbum(modelId INTEGER PRIMARY KEY, uuid varchar, name varchar,

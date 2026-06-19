@@ -38,6 +38,17 @@ final class MetadataTests: XCTestCase {
         }
     }
 
+    func testReadsGPSFromVersion() throws {
+        let lib = try openTestLibrary()
+        // Fixture: pic1 is geotagged (Toronto ~43.65, -79.38); pic2 is not.
+        let photos = try lib.photos()
+        let located = photos.first { $0.version.hasLocation }
+        let geo = try XCTUnwrap(located)
+        XCTAssertEqual(geo.version.latitude ?? 0, 43.6532, accuracy: 0.01)
+        XCTAssertEqual(geo.version.longitude ?? 0, -79.3832, accuracy: 0.01)
+        XCTAssertTrue(photos.contains { !$0.version.hasLocation })
+    }
+
     func testApexApertureConversion() {
         // APEX ApertureValue 6 -> f/8 ; 2 -> f/2.
         var dict: [String: Any] = ["exifProperties": ["ApertureValue": 6.0]]

@@ -90,6 +90,9 @@ struct InfoInspector: View {
                 row("Dimensions", "\(w) × \(h)")
             }
             row("Type", photo.master.type)
+            if let lat = photo.version.latitude, let lon = photo.version.longitude {
+                row("Location", String(format: "%.4f, %.4f", lat, lon))
+            }
             if photo.version.hasAdjustments { row("Edited", "Yes") }
             if photo.master.isReference { row("Referenced", "Yes") }
             if let meta {

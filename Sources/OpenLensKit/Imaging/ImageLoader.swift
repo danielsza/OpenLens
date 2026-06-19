@@ -98,6 +98,20 @@ public enum ImageLoader {
         return out
     }
 
+    /// GPS coordinate (signed lat, lon) from an image's metadata, if present.
+    public static func gpsCoordinate(at url: URL) -> (latitude: Double, longitude: Double)? {
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any],
+              let gps = props[kCGImagePropertyGPSDictionary] as? [CFString: Any],
+              let lat = gps[kCGImagePropertyGPSLatitude] as? Double,
+              let lon = gps[kCGImagePropertyGPSLongitude] as? Double else {
+            return nil
+        }
+        let latRef = (gps[kCGImagePropertyGPSLatitudeRef] as? String) ?? "N"
+        let lonRef = (gps[kCGImagePropertyGPSLongitudeRef] as? String) ?? "E"
+        return (latRef == "S" ? -lat : lat, lonRef == "W" ? -lon : lon)
+    }
+
     /// True if ImageIO recognises the file as a decodable image.
     public static func canDecode(_ url: URL) -> Bool {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),

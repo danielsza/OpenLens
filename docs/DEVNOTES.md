@@ -178,6 +178,10 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   `parseMetadata` now prefers a direct `FNumber` (how we write imports) over the
   APEX `ApertureValue` (how Aperture stored it).
 
+- **2026-06-19** GPS/location: read `RKVersion.exifLatitude/exifLongitude`
+  (`PhotoVersion.latitude/longitude`), shown in the Info tab; extracted from
+  EXIF on import; added the columns to the fixture + creator schema.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

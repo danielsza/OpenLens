@@ -121,7 +121,7 @@ public final class ApertureLibrary {
                    projectUuid, mainRating, isFlagged, colorLabelIndex,
                    hasAdjustments, isOriginal, rotation, isInTrash,
                    showInLibrary, imageDate, masterWidth, masterHeight, stackUuid,
-                   hasKeywords
+                   hasKeywords, exifLatitude, exifLongitude
             FROM RKVersion
             WHERE (isInTrash = 0 OR isInTrash IS NULL)
             """
@@ -204,7 +204,9 @@ public final class ApertureLibrary {
             masterWidth: row["masterWidth"]?.intValue,
             masterHeight: row["masterHeight"]?.intValue,
             stackUuid: row["stackUuid"]?.stringValue,
-            hasKeywords: (row["hasKeywords"]?.intValue ?? 0) == 1
+            hasKeywords: (row["hasKeywords"]?.intValue ?? 0) == 1,
+            latitude: row["exifLatitude"]?.doubleValue,
+            longitude: row["exifLongitude"]?.doubleValue
         )
     }
 

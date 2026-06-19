@@ -194,16 +194,22 @@ public final class ApertureLibraryWriter {
                   .text(dest.lastPathComponent), .text(baseName), .text(imagePath),
                   .integer(Int64(fileSize)), .real(appleDate), .real(appleDate)])
 
+        let gps = ImageLoader.gpsCoordinate(at: dest)
+        let latVal: SQLiteDatabase.Value = gps.map { .real($0.latitude) } ?? .null
+        let lonVal: SQLiteDatabase.Value = gps.map { .real($0.longitude) } ?? .null
+
         let versionUuid = UUID().uuidString
         let versionMid = try nextModelId("RKVersion", db)
         try db.execute("""
             INSERT INTO RKVersion(modelId, uuid, name, fileName, versionNumber, masterUuid, projectUuid,
                 imageDate, mainRating, isFlagged, isOriginal, isEditable, colorLabelIndex,
-                masterWidth, masterHeight, rotation, hasAdjustments, hasKeywords, createDate, isInTrash, showInLibrary)
-            VALUES (?, ?, ?, ?, 1, ?, ?, ?, 0, 0, 1, 1, -1, ?, ?, 0, 0, 0, ?, 0, 1)
+                masterWidth, masterHeight, rotation, hasAdjustments, hasKeywords, createDate, isInTrash, showInLibrary,
+                exifLatitude, exifLongitude)
+            VALUES (?, ?, ?, ?, 1, ?, ?, ?, 0, 0, 1, 1, -1, ?, ?, 0, 0, 0, ?, 0, 1, ?, ?)
             """, [.integer(Int64(versionMid)), .text(versionUuid), .text(name),
                   .text(dest.lastPathComponent), .text(masterUuid), .text(projectUuid),
-                  .real(appleDate), .integer(Int64(width)), .integer(Int64(height)), .real(appleDate)])
+                  .real(appleDate), .integer(Int64(width)), .integer(Int64(height)), .real(appleDate),
+                  latVal, lonVal])
 
         // Best-effort: generate a cached thumbnail + a Version-1.apversion plist
         // (EXIF + proxy paths) so imported photos browse fast and show metadata.

@@ -69,6 +69,12 @@ public struct PhotoVersion: Identifiable, Hashable {
 
     /// Whether the version has any keywords assigned (`RKVersion.hasKeywords`).
     public var hasKeywords: Bool = false
+
+    /// GPS coordinates from `RKVersion.exifLatitude/exifLongitude`, if present.
+    public var latitude: Double?
+    public var longitude: Double?
+
+    public var hasLocation: Bool { latitude != nil && longitude != nil }
 }
 
 /// Combined view used by the UI: a version plus its resolved master.
