@@ -155,6 +155,13 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   sources) like Aperture. Reject now supported (rating -1; writer clamp -1...5,
   `9` key, control-bar reject button); populates the Rejected source.
 
+- **2026-06-19** New-library creation: `ApertureLibraryCreator.createLibrary`
+  authors a fresh `.aplibrary` (package + Info.plist + `Library.apdb` with the
+  RK* tables OpenLens reads + system folders/smart albums). Wired to **New
+  Library…** (⌘N). `SQLiteDatabase` gained a `create` mode. Note: authors the
+  tables OpenLens uses, not all ~33 of Aperture's — fine for OpenLens; full
+  Aperture-authoring is a later refinement.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

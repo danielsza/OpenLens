@@ -67,10 +67,13 @@ public final class SQLiteDatabase {
     /// locking and never attempts to create a journal/WAL/-shm side file —
     /// which otherwise yields "attempt to write a readonly database" errors on
     /// some platforms even for pure SELECTs.
-    public init(path: String, readOnly: Bool = true) throws {
+    public init(path: String, readOnly: Bool = true, create: Bool = false) throws {
         self.path = path
         var rc: Int32
-        if readOnly {
+        if create {
+            rc = sqlite3_open_v2(path, &handle,
+                                 SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nil)
+        } else if readOnly {
             let encoded = path.addingPercentEncoding(
                 withAllowedCharacters: .urlPathAllowed) ?? path
             let uri = "file:\(encoded)?immutable=1"

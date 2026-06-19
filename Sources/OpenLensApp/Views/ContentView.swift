@@ -23,6 +23,9 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .openLibraryRequested)) { _ in
             openLibrary()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .newLibraryRequested)) { _ in
+            newLibrary()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .closeLibraryRequested)) { _ in
             store.closeLibrary()
         }
@@ -160,6 +163,24 @@ struct ContentView: View {
             openLibrary()
         } else if !store.openLastIfAvailable() {
             openLibrary()
+        }
+    }
+
+    private func newLibrary() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "Untitled.aplibrary"
+        panel.message = "Choose where to create the new library"
+        panel.prompt = "Create"
+        guard panel.runModal() == .OK, var url = panel.url else { return }
+        if url.pathExtension != "aplibrary" {
+            url.deletePathExtension()
+            url.appendPathExtension("aplibrary")
+        }
+        do {
+            _ = try ApertureLibraryCreator.createLibrary(at: url, firstProjectNamed: "Untitled Project")
+            store.open(url: url)
+        } catch {
+            store.errorMessage = "Couldn't create library: \(error)"
         }
     }
 
