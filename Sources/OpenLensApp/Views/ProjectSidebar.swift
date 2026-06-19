@@ -6,6 +6,17 @@ struct ProjectSidebar: View {
 
     var body: some View {
         List {
+            Section("Library") {
+                ForEach(LibraryStore.LibrarySource.allCases) { source in
+                    row(title: source.rawValue,
+                        systemImage: source.systemImage,
+                        count: count(for: source),
+                        isSelected: store.selectedSource == source) {
+                        store.selectSource(source)
+                    }
+                }
+            }
+
             Section("Projects") {
                 if store.projectTree.isEmpty {
                     ForEach(store.projects) { project in
@@ -38,6 +49,15 @@ struct ProjectSidebar: View {
         .listStyle(.sidebar)
         .scrollContentBackground(.hidden)
         .background(Theme.panel)
+    }
+
+    private func count(for source: LibraryStore.LibrarySource) -> Int {
+        switch source {
+        case .allPhotos: return store.photos.count
+        case .flagged: return store.photos.filter { $0.version.isFlagged }.count
+        case .rejected: return store.photos.filter { $0.version.rating < 0 }.count
+        case .trash: return store.trashed.count
+        }
     }
 
     @ViewBuilder

@@ -12,11 +12,31 @@ final class LibraryStore: ObservableObject {
     @Published var photos: [Photo] = []
     @Published var selectedProjectID: String?
     @Published var selectedAlbumID: String?
+    @Published var selectedSource: LibrarySource?
     @Published var selectedPhotoID: String?
     @Published var errorMessage: String?
 
     /// Precomputed album membership (album uuid -> photos).
     private var albumPhotos: [String: [Photo]] = [:]
+    /// Photos currently in the trash.
+    private(set) var trashed: [Photo] = []
+
+    /// Aperture-style smart sources in the Library tab.
+    enum LibrarySource: String, CaseIterable, Identifiable {
+        case allPhotos = "Photos"
+        case flagged = "Flagged"
+        case rejected = "Rejected"
+        case trash = "Trash"
+        var id: String { rawValue }
+        var systemImage: String {
+            switch self {
+            case .allPhotos: return "photo.on.rectangle"
+            case .flagged: return "flag"
+            case .rejected: return "xmark.circle"
+            case .trash: return "trash"
+            }
+        }
+    }
 
     /// When true, rating edits are written back to the library on disk.
     /// Default off — browsing is non-destructive until the user opts in.
@@ -30,20 +50,39 @@ final class LibraryStore: ObservableObject {
 
     var visiblePhotos: [Photo] {
         let base: [Photo]
-        if let aid = selectedAlbumID { base = albumPhotos[aid] ?? [] }
-        else if let pid = selectedProjectID { base = photos.filter { $0.version.projectUuid == pid } }
-        else { base = photos }
+        if let source = selectedSource {
+            switch source {
+            case .allPhotos: base = photos
+            case .flagged: base = photos.filter { $0.version.isFlagged }
+            case .rejected: base = photos.filter { $0.version.rating < 0 }
+            case .trash: base = trashed
+            }
+        } else if let aid = selectedAlbumID {
+            base = albumPhotos[aid] ?? []
+        } else if let pid = selectedProjectID {
+            base = photos.filter { $0.version.projectUuid == pid }
+        } else {
+            base = photos
+        }
         return filter.apply(to: base)
     }
 
     func selectProject(_ id: String?) {
+        selectedSource = nil
         selectedAlbumID = nil
         selectedProjectID = id
     }
 
     func selectAlbum(_ id: String?) {
+        selectedSource = nil
         selectedProjectID = nil
         selectedAlbumID = id
+    }
+
+    func selectSource(_ source: LibrarySource?) {
+        selectedProjectID = nil
+        selectedAlbumID = nil
+        selectedSource = source
     }
 
     var selectedPhoto: Photo? {
@@ -76,8 +115,10 @@ final class LibraryStore: ObservableObject {
         userAlbums = []
         photos = []
         albumPhotos = [:]
+        trashed = []
         selectedProjectID = nil
         selectedAlbumID = nil
+        selectedSource = nil
         selectedPhotoID = nil
         errorMessage = nil
     }
@@ -95,8 +136,10 @@ final class LibraryStore: ObservableObject {
                 map[album.id] = (try? lib.photos(inAlbum: album)) ?? []
             }
             self.albumPhotos = map
+            self.trashed = (try? lib.trashedPhotos()) ?? []
             self.selectedProjectID = projects.first?.id
             self.selectedAlbumID = nil
+            self.selectedSource = nil
             self.errorMessage = nil
             UserDefaults.standard.set(url.path, forKey: lastLibraryKey)
         } catch {
