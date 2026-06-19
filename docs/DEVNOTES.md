@@ -189,6 +189,10 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   `--duplicate`. App trash actions: Photo ▸ Move to Trash (⌘⌫) / Put Back /
   Empty Trash… (with confirm).
 
+- **2026-06-19** Resilience: optional readers (stacks/albums/keywords/
+  adjustments) guard on `tableExists` so libraries from other Aperture builds
+  (missing a table) degrade to empty instead of crashing. + test.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

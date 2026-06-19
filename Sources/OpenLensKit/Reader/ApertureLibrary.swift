@@ -183,6 +183,14 @@ public final class ApertureLibrary {
 
     // MARK: - Helpers
 
+    /// Whether a table exists — lets optional features degrade gracefully on
+    /// libraries from Aperture versions with a slightly different schema.
+    public func tableExists(_ name: String) -> Bool {
+        let rows = (try? libraryDB.query(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name = ?", [.text(name)])) ?? []
+        return !rows.isEmpty
+    }
+
     static func makeVersion(from row: SQLiteDatabase.Row) -> PhotoVersion {
         PhotoVersion(
             id: row["uuid"]?.stringValue ?? "",

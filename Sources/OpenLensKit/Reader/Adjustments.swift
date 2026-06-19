@@ -4,6 +4,7 @@ public extension ApertureLibrary {
 
     /// Adjustments recorded against a photo's version, in apply order.
     func adjustments(for photo: Photo) throws -> [Adjustment] {
+        guard tableExists("RKImageAdjustment") else { return [] }
         let rows = try libraryDB.query("""
             SELECT uuid, name, versionUuid, adjIndex, isEnabled, data
             FROM RKImageAdjustment

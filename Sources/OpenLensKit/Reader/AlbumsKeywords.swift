@@ -6,6 +6,7 @@ public extension ApertureLibrary {
 
     /// All albums not in the trash.
     func albums() throws -> [Album] {
+        guard tableExists("RKAlbum") else { return [] }
         let rows = try libraryDB.query("""
             SELECT modelId, uuid, name, albumType, albumSubclass,
                    folderUuid, isMagic, isInTrash
@@ -34,6 +35,7 @@ public extension ApertureLibrary {
 
     /// Photos belonging to a regular album, via `RKAlbumVersion`.
     func photos(inAlbum album: Album) throws -> [Photo] {
+        guard tableExists("RKAlbumVersion") else { return [] }
         let idRows = try libraryDB.query(
             "SELECT versionId FROM RKAlbumVersion WHERE albumId = ?",
             [.integer(Int64(album.modelId))])
@@ -46,6 +48,7 @@ public extension ApertureLibrary {
 
     /// The full keyword vocabulary (a tree, linked by `parentModelId`).
     func keywordVocabulary() throws -> [Keyword] {
+        guard tableExists("RKKeyword") else { return [] }
         let rows = try libraryDB.query("""
             SELECT modelId, uuid, name, parentId, hasChildren
             FROM RKKeyword
@@ -64,6 +67,7 @@ public extension ApertureLibrary {
 
     /// Keyword names assigned to a specific photo (via `RKKeywordForVersion`).
     func keywords(for photo: Photo) throws -> [String] {
+        guard tableExists("RKKeywordForVersion"), tableExists("RKKeyword") else { return [] }
         let rows = try libraryDB.query("""
             SELECT k.name AS name
             FROM RKKeyword k

@@ -4,6 +4,7 @@ public extension ApertureLibrary {
 
     /// All stacks, with ordered member version uuids and the collapsed "pick".
     func stacks() throws -> [Stack] {
+        guard tableExists("RKStackContent") else { return [] }
         let content = try libraryDB.query("""
             SELECT stackUuid, versionUuid, orderNumber
             FROM RKStackContent
