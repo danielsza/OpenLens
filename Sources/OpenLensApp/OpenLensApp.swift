@@ -17,10 +17,14 @@ struct OpenLensApp: App {
         }
         .commands {
             CommandGroup(replacing: .newItem) {
-                Button("Open Library…") {
+                Button("Open / Switch Library…") {
                     NotificationCenter.default.post(name: .openLibraryRequested, object: nil)
                 }
                 .keyboardShortcut("o")
+                Button("Close Library") {
+                    NotificationCenter.default.post(name: .closeLibraryRequested, object: nil)
+                }
+                .keyboardShortcut("w", modifiers: [.command, .shift])
             }
         }
     }
@@ -28,4 +32,5 @@ struct OpenLensApp: App {
 
 extension Notification.Name {
     static let openLibraryRequested = Notification.Name("openLibraryRequested")
+    static let closeLibraryRequested = Notification.Name("closeLibraryRequested")
 }

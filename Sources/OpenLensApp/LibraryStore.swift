@@ -50,6 +50,38 @@ final class LibraryStore: ObservableObject {
         photos.first { $0.id == selectedPhotoID }
     }
 
+    private let lastLibraryKey = "OpenLens.lastLibraryPath"
+
+    /// The most recently opened library path, if any.
+    var lastLibraryURL: URL? {
+        UserDefaults.standard.string(forKey: lastLibraryKey).map { URL(fileURLWithPath: $0) }
+    }
+
+    /// Opens the last-used library if it still exists. Returns false if there is
+    /// none or it's missing (caller should then show the open dialog).
+    @discardableResult
+    func openLastIfAvailable() -> Bool {
+        guard let url = lastLibraryURL,
+              FileManager.default.fileExists(atPath: url.path) else { return false }
+        open(url: url)
+        return library != nil
+    }
+
+    /// Closes the current library without quitting the app (returns to the
+    /// "no library open" state so the user can open or switch).
+    func closeLibrary() {
+        library = nil
+        projects = []
+        projectTree = []
+        userAlbums = []
+        photos = []
+        albumPhotos = [:]
+        selectedProjectID = nil
+        selectedAlbumID = nil
+        selectedPhotoID = nil
+        errorMessage = nil
+    }
+
     func open(url: URL) {
         do {
             let lib = try ApertureLibrary(url: url)
@@ -66,6 +98,7 @@ final class LibraryStore: ObservableObject {
             self.selectedProjectID = projects.first?.id
             self.selectedAlbumID = nil
             self.errorMessage = nil
+            UserDefaults.standard.set(url.path, forKey: lastLibraryKey)
         } catch {
             self.errorMessage = "\(error)"
         }

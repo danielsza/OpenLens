@@ -145,6 +145,12 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   inspector** (Library / Info / Adjustments) like Aperture (two-pane layout);
   moved the Grid/Split/Viewer switcher to the top-right.
 
+- **2026-06-19** Library session behavior like Aperture: remember last library
+  (UserDefaults) and auto-open on launch; hold **Option** at launch for the
+  chooser; **Open / Switch Library…** (⌘O) and **Close Library** (⇧⌘W) menu
+  commands; Close returns to the chooser without quitting. (New-library
+  creation still TODO — we can't author an `.aplibrary` from scratch yet.)
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

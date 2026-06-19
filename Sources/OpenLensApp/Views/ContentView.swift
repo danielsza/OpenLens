@@ -4,6 +4,7 @@ import OpenLensKit
 
 struct ContentView: View {
     @StateObject private var store = LibraryStore()
+    @State private var didAutoOpen = false
 
     var body: some View {
         HSplitView {
@@ -22,6 +23,10 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .openLibraryRequested)) { _ in
             openLibrary()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .closeLibraryRequested)) { _ in
+            store.closeLibrary()
+        }
+        .onAppear { autoOpenIfNeeded() }
         .alert("Library error",
                isPresented: Binding(get: { store.errorMessage != nil },
                                     set: { if !$0 { store.errorMessage = nil } })) {
@@ -128,6 +133,19 @@ struct ContentView: View {
             }
             .pickerStyle(.segmented)
             .help("Switch between Grid, Split, and Viewer layouts.")
+        }
+    }
+
+    /// On launch: open the last-used library automatically. Hold Option to get
+    /// the chooser instead; if there's no prior library, show the open dialog.
+    private func autoOpenIfNeeded() {
+        guard !didAutoOpen else { return }
+        didAutoOpen = true
+        let optionDown = NSEvent.modifierFlags.contains(.option)
+        if optionDown {
+            openLibrary()
+        } else if !store.openLastIfAvailable() {
+            openLibrary()
         }
     }
 
