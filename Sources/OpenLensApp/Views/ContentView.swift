@@ -112,11 +112,20 @@ struct ContentView: View {
                 .textFieldStyle(.roundedBorder).frame(width: 160)
 
             Spacer()
-            Text("\(store.visiblePhotos.count) photos")
+            Text(statusText)
                 .foregroundStyle(Theme.textSecondary).font(.caption)
         }
         .padding(.horizontal, 12).padding(.vertical, 6)
         .background(Theme.panel)
+    }
+
+    private var statusText: String {
+        let photos = store.visiblePhotos
+        if let id = store.selectedPhotoID,
+           let idx = photos.firstIndex(where: { $0.id == id }) {
+            return "\(idx + 1) of \(photos.count) — \(photos.count) displayed"
+        }
+        return "\(photos.count) displayed"
     }
 
     // MARK: - Toolbar
