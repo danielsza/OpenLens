@@ -33,6 +33,15 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .duplicateVersionRequested)) { _ in
             duplicateSelected()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .moveToTrashRequested)) { _ in
+            if let p = store.selectedPhoto { store.moveToTrash(p) }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .restoreRequested)) { _ in
+            if let p = store.selectedPhoto { store.restoreFromTrash(p) }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .emptyTrashRequested)) { _ in
+            confirmEmptyTrash()
+        }
         .onAppear { autoOpenIfNeeded() }
         .alert("Library error",
                isPresented: Binding(get: { store.errorMessage != nil },
@@ -200,6 +209,17 @@ struct ContentView: View {
             store.reload()
             store.selectAlbum(uuid)
         } catch { store.errorMessage = "Couldn't create album: \(error)" }
+    }
+
+    private func confirmEmptyTrash() {
+        guard store.library != nil else { return }
+        let alert = NSAlert()
+        alert.messageText = "Empty Trash?"
+        alert.informativeText = "This permanently deletes the photos in the trash and their files. This can't be undone."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Empty Trash")
+        alert.addButton(withTitle: "Cancel")
+        if alert.runModal() == .alertFirstButtonReturn { store.emptyTrash() }
     }
 
     private func duplicateSelected() {

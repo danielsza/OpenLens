@@ -35,6 +35,17 @@ struct OpenLensApp: App {
                     NotificationCenter.default.post(name: .duplicateVersionRequested, object: nil)
                 }
                 .keyboardShortcut("d")
+                Divider()
+                Button("Move to Trash") {
+                    NotificationCenter.default.post(name: .moveToTrashRequested, object: nil)
+                }
+                .keyboardShortcut(.delete, modifiers: [.command])
+                Button("Put Back") {
+                    NotificationCenter.default.post(name: .restoreRequested, object: nil)
+                }
+                Button("Empty Trash…") {
+                    NotificationCenter.default.post(name: .emptyTrashRequested, object: nil)
+                }
             }
         }
     }
@@ -43,6 +54,9 @@ struct OpenLensApp: App {
 extension Notification.Name {
     static let newLibraryRequested = Notification.Name("newLibraryRequested")
     static let duplicateVersionRequested = Notification.Name("duplicateVersionRequested")
+    static let moveToTrashRequested = Notification.Name("moveToTrashRequested")
+    static let restoreRequested = Notification.Name("restoreRequested")
+    static let emptyTrashRequested = Notification.Name("emptyTrashRequested")
     static let openLibraryRequested = Notification.Name("openLibraryRequested")
     static let closeLibraryRequested = Notification.Name("closeLibraryRequested")
 }

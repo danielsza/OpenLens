@@ -185,6 +185,10 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
 - **2026-06-19** Duplicate Version: `duplicateVersion` writer method (new version
   row sharing the master) + Photo ▸ Duplicate Version (⌘D); tested.
 
+- **2026-06-19** CLI authoring: `--create`, `--new-project`, `--import`,
+  `--duplicate`. App trash actions: Photo ▸ Move to Trash (⌘⌫) / Put Back /
+  Empty Trash… (with confirm).
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

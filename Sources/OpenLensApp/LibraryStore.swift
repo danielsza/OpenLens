@@ -113,6 +113,29 @@ final class LibraryStore: ObservableObject {
         if let url = library?.url { open(url: url) }
     }
 
+    private func makeWriter() -> ApertureLibraryWriter? {
+        guard let lib = library else { return nil }
+        return ApertureLibraryWriter(libraryURL: lib.url, allowWrites: true)
+    }
+
+    func moveToTrash(_ photo: Photo) {
+        guard let w = makeWriter() else { return }
+        do { try w.moveToTrash(versionUuid: photo.version.id); reload() }
+        catch { errorMessage = "Couldn't move to trash: \(error)" }
+    }
+
+    func restoreFromTrash(_ photo: Photo) {
+        guard let w = makeWriter() else { return }
+        do { try w.restoreFromTrash(versionUuid: photo.version.id); reload() }
+        catch { errorMessage = "Couldn't restore: \(error)" }
+    }
+
+    func emptyTrash() {
+        guard let w = makeWriter() else { return }
+        do { _ = try w.emptyTrash(); reload() }
+        catch { errorMessage = "Couldn't empty trash: \(error)" }
+    }
+
     func closeLibrary() {
         library = nil
         projects = []
