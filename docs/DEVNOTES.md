@@ -166,6 +166,12 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   `addVersion(_:toAlbumUuid:)` on the writer (+ tests on a created library).
   Wired to a toolbar "+" menu (New Project / New Album) with a name prompt.
 
+- **2026-06-19** Import: `importImage(at:intoProject:)` copies a file into
+  `Masters/<date>/<stamp>/` and authors `RKMaster`/`RKVersion` (managed master).
+  Wired to "+" menu → Import Photos…. Thumbnail/EXIF-plist generation on import
+  is still TODO (reader falls back to decoding the master). Tested end-to-end on
+  a created library.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

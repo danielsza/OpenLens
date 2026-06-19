@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 import OpenLensKit
 
 struct ContentView: View {
@@ -142,6 +143,9 @@ struct ContentView: View {
             Menu {
                 Button("New Project…") { createProject() }
                 Button("New Album…") { createAlbum() }
+                Divider()
+                Button("Import Photos…") { importPhotos() }
+                    .disabled(store.projects.isEmpty)
             } label: {
                 Label("New", systemImage: "plus")
             }
@@ -193,6 +197,30 @@ struct ContentView: View {
             store.reload()
             store.selectAlbum(uuid)
         } catch { store.errorMessage = "Couldn't create album: \(error)" }
+    }
+
+    private func importPhotos() {
+        guard let lib = store.library else { return }
+        guard let projectUuid = store.selectedProjectID ?? store.projects.first?.id else {
+            store.errorMessage = "Create or select a project first."
+            return
+        }
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = true
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowedContentTypes = [.image]
+        panel.message = "Choose photos to import into the project"
+        guard panel.runModal() == .OK else { return }
+        let writer = ApertureLibraryWriter(libraryURL: lib.url, allowWrites: true)
+        var failed = 0
+        for url in panel.urls {
+            do { _ = try writer.importImage(at: url, intoProject: projectUuid) }
+            catch { failed += 1 }
+        }
+        store.reload()
+        store.selectProject(projectUuid)
+        if failed > 0 { store.errorMessage = "\(failed) file(s) couldn't be imported." }
     }
 
     private func promptForName(title: String, placeholder: String) -> String? {

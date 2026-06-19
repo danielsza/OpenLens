@@ -142,6 +142,72 @@ public final class ApertureLibraryWriter {
         }
     }
 
+    // MARK: - Import
+
+    /// Imports an image file into a project as a managed master (copies the file
+    /// into the library's `Masters/` tree and authors `RKMaster`/`RKVersion`).
+    /// Returns the new version's uuid. Thumbnails/EXIF plists aren't generated
+    /// yet — the reader falls back to decoding the master for display.
+    @discardableResult
+    public func importImage(at source: URL, intoProject projectUuid: String,
+                            fileName: String? = nil) throws -> String {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let fm = FileManager.default
+
+        let attrs = try? fm.attributesOfItem(atPath: source.path)
+        let date = (attrs?[.modificationDate] as? Date) ?? Date()
+        let fileSize = (attrs?[.size] as? Int) ?? 0
+
+        let dayFmt = DateFormatter(); dayFmt.dateFormat = "yyyy/MM/dd"
+        let stampFmt = DateFormatter(); stampFmt.dateFormat = "yyyyMMdd-HHmmss"
+        let datePath = "\(dayFmt.string(from: date))/\(stampFmt.string(from: date))"
+
+        let mastersDir = libraryURL.appendingPathComponent("Masters").appendingPathComponent(datePath)
+        try fm.createDirectory(at: mastersDir, withIntermediateDirectories: true)
+
+        let baseName = fileName ?? source.lastPathComponent
+        var dest = mastersDir.appendingPathComponent(baseName)
+        var counter = 1
+        while fm.fileExists(atPath: dest.path) {
+            let stem = (baseName as NSString).deletingPathExtension
+            let ext = (baseName as NSString).pathExtension
+            dest = mastersDir.appendingPathComponent("\(stem)-\(counter).\(ext)")
+            counter += 1
+        }
+        try fm.copyItem(at: source, to: dest)
+
+        let imagePath = "\(datePath)/\(dest.lastPathComponent)"
+        let size = ImageLoader.pixelSize(at: dest)
+        let width = Int(size?.width ?? 0)
+        let height = Int(size?.height ?? 0)
+        let name = (dest.lastPathComponent as NSString).deletingPathExtension
+        let appleDate = date.timeIntervalSinceReferenceDate
+
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+        let masterUuid = UUID().uuidString
+        let masterMid = try nextModelId("RKMaster", db)
+        try db.execute("""
+            INSERT INTO RKMaster(modelId, uuid, name, projectUuid, fileName, originalFileName,
+                type, fileIsReference, isMissing, imagePath, fileSize, imageDate, createDate, isInTrash)
+            VALUES (?, ?, ?, ?, ?, ?, 'IMGT', 0, 0, ?, ?, ?, ?, 0)
+            """, [.integer(Int64(masterMid)), .text(masterUuid), .text(name), .text(projectUuid),
+                  .text(dest.lastPathComponent), .text(baseName), .text(imagePath),
+                  .integer(Int64(fileSize)), .real(appleDate), .real(appleDate)])
+
+        let versionUuid = UUID().uuidString
+        let versionMid = try nextModelId("RKVersion", db)
+        try db.execute("""
+            INSERT INTO RKVersion(modelId, uuid, name, fileName, versionNumber, masterUuid, projectUuid,
+                imageDate, mainRating, isFlagged, isOriginal, isEditable, colorLabelIndex,
+                masterWidth, masterHeight, rotation, hasAdjustments, hasKeywords, createDate, isInTrash, showInLibrary)
+            VALUES (?, ?, ?, ?, 1, ?, ?, ?, 0, 0, 1, 1, -1, ?, ?, 0, 0, 0, ?, 0, 1)
+            """, [.integer(Int64(versionMid)), .text(versionUuid), .text(name),
+                  .text(dest.lastPathComponent), .text(masterUuid), .text(projectUuid),
+                  .real(appleDate), .integer(Int64(width)), .integer(Int64(height)), .real(appleDate)])
+
+        return versionUuid
+    }
+
     // MARK: - Trash (reversible)
 
     /// Moves a version to the trash (sets `isInTrash`). Reversible with

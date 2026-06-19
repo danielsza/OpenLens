@@ -48,7 +48,10 @@ first, writes only when proven, always reversible.
 - [ ] Export presets (size, quality, naming, watermark).
 - [ ] "Open in external editor" round-trip that re-imports the result as a new
       version.
-- [ ] Import new files into existing projects (the riskiest write path — last).
+- [x] Create a new library from scratch (`ApertureLibraryCreator`).
+- [x] Create projects and albums.
+- [x] Import images into a project as managed masters (basic; thumbnails/EXIF
+      plist generation on import still TODO).
 
 ## Phase 5 — Referenced masters & robustness
 - [ ] Resolve referenced masters via `fileAliasData` / `RKVolume`.
