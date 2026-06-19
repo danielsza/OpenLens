@@ -12,6 +12,8 @@ struct ExportSheet: View {
     @State private var quality: Double = 0.9
     @State private var dpiText: String = ""
     @State private var watermarkText: String = ""
+    @State private var watermarkImageURL: URL?
+    @State private var watermarkScale: Double = 0.25
     @State private var watermarkPosition: Watermark.Position = .bottomCenter
     @State private var watermarkOpacity: Double = 0.5
     @State private var selectionOnly = true
@@ -52,6 +54,26 @@ struct ExportSheet: View {
                     Divider()
                     Text("Watermark").font(.headline)
                     TextField("Text (leave blank for none)", text: $watermarkText)
+
+                    HStack {
+                        Text("Logo")
+                        if let url = watermarkImageURL {
+                            Text(url.lastPathComponent).lineLimit(1).truncationMode(.middle)
+                            Button("Clear") { watermarkImageURL = nil }
+                        } else {
+                            Text("None").foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button("Choose Image…") { chooseLogo() }
+                    }
+                    if watermarkImageURL != nil {
+                        HStack {
+                            Text("Logo size")
+                            Slider(value: $watermarkScale, in: 0.05...0.6)
+                            Text("\(Int(watermarkScale * 100))%").monospacedDigit().frame(width: 42)
+                        }
+                    }
+
                     Picker("Position", selection: $watermarkPosition) {
                         ForEach(Watermark.Position.allCases, id: \.self) { Text($0.displayName).tag($0) }
                     }
@@ -91,6 +113,15 @@ struct ExportSheet: View {
         return store.visiblePhotos
     }
 
+    private func chooseLogo() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowedContentTypes = [.image]
+        panel.message = "Choose a watermark/logo image (PNG with transparency works best)"
+        if panel.runModal() == .OK { watermarkImageURL = panel.url }
+    }
+
     private func runExport() {
         guard let lib = store.library else { return }
         let photos = photosToExport()
@@ -105,7 +136,10 @@ struct ExportSheet: View {
         guard panel.runModal() == .OK, let dest = panel.url else { return }
 
         var watermark: Watermark?
-        if !watermarkText.trimmingCharacters(in: .whitespaces).isEmpty {
+        if let logo = watermarkImageURL {
+            watermark = Watermark(imageURL: logo, opacity: watermarkOpacity,
+                                  scale: watermarkScale, position: watermarkPosition)
+        } else if !watermarkText.trimmingCharacters(in: .whitespaces).isEmpty {
             watermark = Watermark(text: watermarkText, opacity: watermarkOpacity, position: watermarkPosition)
         }
         let settings = ExportSettings(
