@@ -123,6 +123,78 @@ public final class ApertureLibraryWriter {
         return uuid
     }
 
+    /// Moves a version (and its master) to another project.
+    public func moveVersion(_ versionUuid: String, toProject projectUuid: String) throws {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+        let masterUuid = try db.query("SELECT masterUuid FROM RKVersion WHERE uuid = ?",
+                                      [.text(versionUuid)]).first?["masterUuid"]?.stringValue
+        try db.execute("UPDATE RKVersion SET projectUuid = ? WHERE uuid = ?",
+                       [.text(projectUuid), .text(versionUuid)])
+        if let masterUuid {
+            try db.execute("UPDATE RKMaster SET projectUuid = ? WHERE uuid = ?",
+                           [.text(projectUuid), .text(masterUuid)])
+        }
+    }
+
+    /// Deletes a user album (the album + its membership rows; photos remain).
+    public func deleteAlbum(_ uuid: String) throws {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+        if let amid = try db.query("SELECT modelId FROM RKAlbum WHERE uuid = ?", [.text(uuid)])
+            .first?["modelId"]?.intValue {
+            try db.execute("DELETE FROM RKAlbumVersion WHERE albumId = ?", [.integer(Int64(amid))])
+        }
+        try db.execute("DELETE FROM RKAlbum WHERE uuid = ?", [.text(uuid)])
+    }
+
+    /// Deletes a project: moves its versions to the trash, then removes the
+    /// folder row. (Photos are recoverable from the trash until emptied.)
+    public func deleteProject(_ uuid: String) throws {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+        try db.execute("UPDATE RKVersion SET isInTrash = 1 WHERE projectUuid = ?", [.text(uuid)])
+        try db.execute("UPDATE RKFolder SET isInTrash = 1 WHERE uuid = ?", [.text(uuid)])
+    }
+
+    // MARK: - Stacks
+
+    /// Creates a stack from the given versions, returning the stack uuid.
+    @discardableResult
+    public func createStack(versionUuids: [String], pick: String? = nil) throws -> String {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        guard !versionUuids.isEmpty else { return "" }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+        let stackUuid = UUID().uuidString
+        for (i, vu) in versionUuids.enumerated() {
+            let mid = try nextModelId("RKStackContent", db)
+            try db.execute("INSERT INTO RKStackContent(modelId, stackUuid, versionUuid, orderNumber) VALUES (?, ?, ?, ?)",
+                           [.integer(Int64(mid)), .text(stackUuid), .text(vu), .integer(Int64(i))])
+            try db.execute("UPDATE RKVersion SET stackUuid = ? WHERE uuid = ?", [.text(stackUuid), .text(vu)])
+        }
+        let sid = try nextModelId("RKStackState", db)
+        try db.execute("INSERT INTO RKStackState(modelId, stackUuid, albumUuid, albumPick, isExpanded) VALUES (?, ?, NULL, ?, 1)",
+                       [.integer(Int64(sid)), .text(stackUuid), .text(pick ?? versionUuids[0])])
+        return stackUuid
+    }
+
+    /// Unstacks: removes the stack and clears its versions' stack reference.
+    public func breakStack(_ stackUuid: String) throws {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+        try db.execute("UPDATE RKVersion SET stackUuid = NULL WHERE stackUuid = ?", [.text(stackUuid)])
+        try db.execute("DELETE FROM RKStackContent WHERE stackUuid = ?", [.text(stackUuid)])
+        try db.execute("DELETE FROM RKStackState WHERE stackUuid = ?", [.text(stackUuid)])
+    }
+
+    /// Sets which version is the stack's pick (the one shown when collapsed).
+    public func setStackPick(_ versionUuid: String, inStack stackUuid: String) throws {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+        try db.execute("UPDATE RKStackState SET albumPick = ? WHERE stackUuid = ?",
+                       [.text(versionUuid), .text(stackUuid)])
+    }
+
     /// Renames a project (RKFolder).
     public func renameProject(_ uuid: String, to name: String) throws {
         guard allowWrites else { throw WriteError.writesNotAllowed }
