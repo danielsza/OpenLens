@@ -86,6 +86,22 @@ public final class ApertureLibraryWriter {
                           iptcStarRating: nil)
     }
 
+    // MARK: - Rotation
+
+    /// Sets absolute rotation (degrees clockwise) on a version.
+    public func setRotation(_ degrees: Int, forVersion uuid: String) throws {
+        let d = ((degrees % 360) + 360) % 360
+        try updateVersion(uuid: uuid,
+                          columns: ["rotation": .integer(Int64(d))],
+                          plistKeys: ["rotation": d],
+                          iptcStarRating: nil)
+    }
+
+    /// Rotates a version 90° left or right relative to its current rotation.
+    public func rotate(_ uuid: String, clockwise: Bool, currentRotation: Int) throws {
+        try setRotation(currentRotation + (clockwise ? 90 : -90), forVersion: uuid)
+    }
+
     // MARK: - IPTC metadata
 
     /// Edits IPTC fields on a version's `.apversion` plist. Only the provided

@@ -139,6 +139,15 @@ final class LibraryStore: ObservableObject {
     func setColorLabelForSelection(_ label: Int) {
         selectionPhotos().forEach { setColorLabel(label, for: $0) }
     }
+    func rotateSelection(clockwise: Bool) {
+        guard let w = makeWriter() else { return }
+        do {
+            for p in selectionPhotos() {
+                try w.rotate(p.version.id, clockwise: clockwise, currentRotation: p.version.rotation)
+            }
+            reload()
+        } catch { errorMessage = "Couldn't rotate: \(error)" }
+    }
 
     var selectedPhoto: Photo? {
         photos.first { $0.id == selectedPhotoID }

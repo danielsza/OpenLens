@@ -51,6 +51,15 @@ struct OpenLensApp: App {
                 }
                 .keyboardShortcut("d")
                 Divider()
+                Button("Rotate Left") {
+                    NotificationCenter.default.post(name: .rotateLeftRequested, object: nil)
+                }
+                .keyboardShortcut("[")
+                Button("Rotate Right") {
+                    NotificationCenter.default.post(name: .rotateRightRequested, object: nil)
+                }
+                .keyboardShortcut("]")
+                Divider()
                 Button("Move to Trash") {
                     NotificationCenter.default.post(name: .moveToTrashRequested, object: nil)
                 }
@@ -69,6 +78,8 @@ struct OpenLensApp: App {
 extension Notification.Name {
     static let newLibraryRequested = Notification.Name("newLibraryRequested")
     static let duplicateVersionRequested = Notification.Name("duplicateVersionRequested")
+    static let rotateLeftRequested = Notification.Name("rotateLeftRequested")
+    static let rotateRightRequested = Notification.Name("rotateRightRequested")
     static let moveToTrashRequested = Notification.Name("moveToTrashRequested")
     static let restoreRequested = Notification.Name("restoreRequested")
     static let emptyTrashRequested = Notification.Name("emptyTrashRequested")

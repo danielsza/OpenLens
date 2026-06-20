@@ -19,11 +19,13 @@ final class ImageCache {
 
     /// Returns a decoded, downsampled image for a photo, caching the result.
     func image(for photo: Photo, in library: ApertureLibrary, maxPixel: Int) async -> NSImage? {
-        let k = key(photo.id, maxPixel)
+        let rotation = photo.version.rotation
+        let k = key("\(photo.id)#\(rotation)", maxPixel)
         if let hit = cache.object(forKey: k) { return hit }
         let url = library.displayImageURL(for: photo)
-        let cg = await Task.detached(priority: .utility) {
-            ImageLoader.cgImage(at: url, maxPixelSize: maxPixel)
+        let cg = await Task.detached(priority: .utility) { () -> CGImage? in
+            guard let base = ImageLoader.cgImage(at: url, maxPixelSize: maxPixel) else { return nil }
+            return ImageLoader.rotate(base, degrees: rotation)
         }.value
         guard let cg else { return nil }
         let image = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
@@ -33,11 +35,13 @@ final class ImageCache {
 
     /// Full-resolution decode for the viewer (cached at a high-size key).
     func fullImage(for photo: Photo, in library: ApertureLibrary) async -> NSImage? {
-        let k = key(photo.id, 0)
+        let rotation = photo.version.rotation
+        let k = key("\(photo.id)#\(rotation)", 0)
         if let hit = cache.object(forKey: k) { return hit }
         let url = library.displayImageURL(for: photo)
-        let cg = await Task.detached(priority: .userInitiated) {
-            ImageLoader.cgImage(at: url, maxPixelSize: 2400)
+        let cg = await Task.detached(priority: .userInitiated) { () -> CGImage? in
+            guard let base = ImageLoader.cgImage(at: url, maxPixelSize: 2400) else { return nil }
+            return ImageLoader.rotate(base, degrees: rotation)
         }.value
         guard let cg else { return nil }
         let image = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))

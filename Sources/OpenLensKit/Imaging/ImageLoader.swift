@@ -98,6 +98,24 @@ public enum ImageLoader {
         return out
     }
 
+    /// Returns the image rotated clockwise by the given degrees (0/90/180/270).
+    public static func rotate(_ cg: CGImage, degrees: Int) -> CGImage {
+        let d = ((degrees % 360) + 360) % 360
+        guard d != 0 else { return cg }
+        let w = cg.width, h = cg.height
+        let swap = (d == 90 || d == 270)
+        let nw = swap ? h : w, nh = swap ? w : h
+        let cs = cg.colorSpace ?? CGColorSpaceCreateDeviceRGB()
+        guard let ctx = CGContext(data: nil, width: nw, height: nh, bitsPerComponent: 8,
+                                  bytesPerRow: 0, space: cs,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return cg }
+        ctx.translateBy(x: CGFloat(nw) / 2, y: CGFloat(nh) / 2)
+        ctx.rotate(by: -Double(d) * .pi / 180)            // clockwise
+        ctx.translateBy(x: -CGFloat(w) / 2, y: -CGFloat(h) / 2)
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+        return ctx.makeImage() ?? cg
+    }
+
     /// RGB + luminance histogram (bucketed counts) for an image.
     public struct Histogram: Equatable {
         public let red: [Int]

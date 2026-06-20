@@ -107,6 +107,24 @@ final class ImportTests: XCTestCase {
         XCTAssertEqual(meta.copyright, "© Daniel")
     }
 
+    func testSetRotation() throws {
+        let libURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("OpenLens-rot-\(UUID().uuidString).aplibrary")
+        defer { try? FileManager.default.removeItem(at: libURL) }
+        let created = try ApertureLibraryCreator.createLibrary(at: libURL, firstProjectNamed: "P")
+        let projectUuid = try XCTUnwrap(created.projects().first?.id)
+        let source = FileManager.default.temporaryDirectory.appendingPathComponent("rot-\(UUID().uuidString).png")
+        defer { try? FileManager.default.removeItem(at: source) }
+        try makePNG(source, width: 20, height: 10)
+
+        let writer = ApertureLibraryWriter(libraryURL: libURL, allowWrites: true)
+        let v = try writer.importImage(at: source, intoProject: projectUuid)
+        try writer.rotate(v, clockwise: true, currentRotation: 0)
+
+        let lib = try ApertureLibrary(url: libURL)
+        XCTAssertEqual(lib.photos().first { $0.id == v }?.version.rotation, 90)
+    }
+
     func testImportRequiresOptIn() throws {
         let libURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("OpenLens-import-\(UUID().uuidString).aplibrary")

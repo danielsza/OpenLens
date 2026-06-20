@@ -231,6 +231,10 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
 - **2026-06-19** Histogram: `ImageLoader.histogram` (RGB + luminance) + a
   luminance histogram in the Adjustments inspector. + test.
 
+- **2026-06-19** Rotate: writer setRotation/rotate + Photo ▸ Rotate Left/Right
+  (⌘[ / ⌘]); ImageCache bakes `RKVersion.rotation` into displayed images
+  (cache keyed by rotation). + test.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.
