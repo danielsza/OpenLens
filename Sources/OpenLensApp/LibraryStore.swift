@@ -193,6 +193,18 @@ final class LibraryStore: ObservableObject {
         catch { errorMessage = "Couldn't restore: \(error)" }
     }
 
+    func renameProject(_ uuid: String, to name: String) {
+        guard let w = makeWriter() else { return }
+        do { try w.renameProject(uuid, to: name); reload() }
+        catch { errorMessage = "Couldn't rename project: \(error)" }
+    }
+
+    func renameAlbum(_ uuid: String, to name: String) {
+        guard let w = makeWriter() else { return }
+        do { try w.renameAlbum(uuid, to: name); reload() }
+        catch { errorMessage = "Couldn't rename album: \(error)" }
+    }
+
     @discardableResult
     func addKeyword(_ name: String, to photo: Photo) -> Bool {
         guard let w = makeWriter() else { return false }

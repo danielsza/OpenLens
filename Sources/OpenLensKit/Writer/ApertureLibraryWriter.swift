@@ -123,6 +123,20 @@ public final class ApertureLibraryWriter {
         return uuid
     }
 
+    /// Renames a project (RKFolder).
+    public func renameProject(_ uuid: String, to name: String) throws {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+        try db.execute("UPDATE RKFolder SET name = ? WHERE uuid = ?", [.text(name), .text(uuid)])
+    }
+
+    /// Renames an album (RKAlbum).
+    public func renameAlbum(_ uuid: String, to name: String) throws {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+        try db.execute("UPDATE RKAlbum SET name = ? WHERE uuid = ?", [.text(name), .text(uuid)])
+    }
+
     /// Adds a version to a regular album (no-op if already a member).
     public func addVersion(_ versionUuid: String, toAlbumUuid albumUuid: String) throws {
         guard allowWrites else { throw WriteError.writesNotAllowed }

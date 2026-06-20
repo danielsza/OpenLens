@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import OpenLensKit
 
 struct ProjectSidebar: View {
@@ -26,6 +27,9 @@ struct ProjectSidebar: View {
                     OutlineGroup(store.projectTree, children: \.nonEmptyChildren) { node in
                         if node.isProject {
                             projectRow(node.folder)
+                                .contextMenu {
+                                    Button("Rename…") { renameProject(node.folder) }
+                                }
                         } else {
                             Label(node.name.isEmpty ? "Folder" : node.name, systemImage: "folder")
                         }
@@ -42,6 +46,13 @@ struct ProjectSidebar: View {
                             isSelected: store.selectedAlbumID == album.id) {
                             store.selectAlbum(album.id)
                         }
+                        .contextMenu {
+                            Button("Rename…") {
+                                if let n = promptName("Rename Album", current: album.displayName) {
+                                    store.renameAlbum(album.id, to: n)
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -49,6 +60,25 @@ struct ProjectSidebar: View {
         .listStyle(.sidebar)
         .scrollContentBackground(.hidden)
         .background(Theme.panel)
+    }
+
+    private func renameProject(_ project: Project) {
+        if let n = promptName("Rename Project", current: project.name) {
+            store.renameProject(project.id, to: n)
+        }
+    }
+
+    private func promptName(_ title: String, current: String) -> String? {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.addButton(withTitle: "Rename")
+        alert.addButton(withTitle: "Cancel")
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
+        field.stringValue = current
+        alert.accessoryView = field
+        guard alert.runModal() == .alertFirstButtonReturn else { return nil }
+        let value = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
     }
 
     private func count(for source: LibraryStore.LibrarySource) -> Int {

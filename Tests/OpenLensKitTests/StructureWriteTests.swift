@@ -38,6 +38,20 @@ final class StructureWriteTests: XCTestCase {
         XCTAssertTrue(userAlbums.contains { $0.id == uuid && $0.name == "Portfolio" })
     }
 
+    func testRenameProjectAndAlbum() throws {
+        let url = try newLibrary()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let writer = ApertureLibraryWriter(libraryURL: url, allowWrites: true)
+        let proj = try writer.createProject(named: "Old")
+        let album = try writer.createAlbum(named: "OldAlbum")
+        try writer.renameProject(proj, to: "New Trip")
+        try writer.renameAlbum(album, to: "Best Of")
+
+        let lib = try ApertureLibrary(url: url)
+        XCTAssertEqual(try lib.projects().first { $0.id == proj }?.name, "New Trip")
+        XCTAssertTrue(try lib.userAlbums().contains { $0.id == album && $0.name == "Best Of" })
+    }
+
     func testStructureWritesRequireOptIn() throws {
         let url = try newLibrary()
         defer { try? FileManager.default.removeItem(at: url) }

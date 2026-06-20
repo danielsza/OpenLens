@@ -215,6 +215,9 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
 - **2026-06-19** Keyword editing in the Info inspector: removable keyword chips
   + add-keyword field (store.addKeyword/removeKeyword on the tested writer).
 
+- **2026-06-19** Rename project/album: writer methods + tests + sidebar
+  right-click ▸ Rename… . Window title shows the open library name.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.
