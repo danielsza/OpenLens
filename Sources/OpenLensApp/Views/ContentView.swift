@@ -7,6 +7,8 @@ struct ContentView: View {
     @StateObject private var store = LibraryStore()
     @State private var didAutoOpen = false
     @State private var showExport = false
+    @State private var showSlideshow = false
+    @State private var showLightTable = false
 
     var body: some View {
         HSplitView {
@@ -47,8 +49,20 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .exportRequested)) { _ in
             if store.library != nil { showExport = true }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .slideshowRequested)) { _ in
+            if !store.visiblePhotos.isEmpty { showSlideshow = true }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .lightTableRequested)) { _ in
+            if !store.visiblePhotos.isEmpty { showLightTable = true }
+        }
         .sheet(isPresented: $showExport) {
             ExportSheet(store: store, isPresented: $showExport)
+        }
+        .sheet(isPresented: $showSlideshow) {
+            SlideshowView(store: store, isPresented: $showSlideshow)
+        }
+        .sheet(isPresented: $showLightTable) {
+            LightTableView(store: store, isPresented: $showLightTable)
         }
         .onAppear { autoOpenIfNeeded() }
         .alert("Library error",

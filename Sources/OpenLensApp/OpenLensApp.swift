@@ -35,6 +35,16 @@ struct OpenLensApp: App {
                 }
                 .keyboardShortcut("e", modifiers: [.command, .shift])
             }
+            CommandMenu("View") {
+                Button("Start Slideshow") {
+                    NotificationCenter.default.post(name: .slideshowRequested, object: nil)
+                }
+                .keyboardShortcut("s", modifiers: [.command, .option])
+                Button("Light Table") {
+                    NotificationCenter.default.post(name: .lightTableRequested, object: nil)
+                }
+                .keyboardShortcut("l", modifiers: [.command, .option])
+            }
             CommandMenu("Photo") {
                 Button("Duplicate Version") {
                     NotificationCenter.default.post(name: .duplicateVersionRequested, object: nil)
@@ -63,6 +73,8 @@ extension Notification.Name {
     static let restoreRequested = Notification.Name("restoreRequested")
     static let emptyTrashRequested = Notification.Name("emptyTrashRequested")
     static let exportRequested = Notification.Name("exportRequested")
+    static let slideshowRequested = Notification.Name("slideshowRequested")
+    static let lightTableRequested = Notification.Name("lightTableRequested")
     static let openLibraryRequested = Notification.Name("openLibraryRequested")
     static let closeLibraryRequested = Notification.Name("closeLibraryRequested")
 }
