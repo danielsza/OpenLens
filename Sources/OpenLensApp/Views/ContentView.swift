@@ -16,6 +16,7 @@ struct ContentView: View {
                 .frame(minWidth: 520)
         }
         .background(Theme.appBackground)
+        .navigationTitle(windowTitle)
         .toolbar { toolbarContent }
         .overlay {
             if store.library == nil {
@@ -147,6 +148,11 @@ struct ContentView: View {
         }
         .padding(.horizontal, 12).padding(.vertical, 6)
         .background(Theme.panel)
+    }
+
+    private var windowTitle: String {
+        guard let lib = store.library else { return "OpenLens" }
+        return lib.url.deletingPathExtension().lastPathComponent
     }
 
     private var statusText: String {
