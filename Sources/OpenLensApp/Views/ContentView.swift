@@ -11,6 +11,13 @@ struct ContentView: View {
     @State private var showLightTable = false
 
     var body: some View {
+        mainView
+            .background(eventHandlers)
+            .background(sheets)
+            .onAppear { autoOpenIfNeeded() }
+    }
+
+    private var mainView: some View {
         HSplitView {
             LeftInspector(store: store)
                 .frame(minWidth: 220, idealWidth: 260, maxWidth: 360)
@@ -25,53 +32,44 @@ struct ContentView: View {
                 ContentUnavailablePlaceholder(action: openLibrary)
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .openLibraryRequested)) { _ in
-            openLibrary()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .newLibraryRequested)) { _ in
-            newLibrary()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .closeLibraryRequested)) { _ in
-            store.closeLibrary()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .duplicateVersionRequested)) { _ in
-            duplicateSelected()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .moveToTrashRequested)) { _ in
-            store.moveSelectionToTrash()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .restoreRequested)) { _ in
-            if let p = store.selectedPhoto { store.restoreFromTrash(p) }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .emptyTrashRequested)) { _ in
-            confirmEmptyTrash()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .exportRequested)) { _ in
-            if store.library != nil { showExport = true }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .slideshowRequested)) { _ in
-            if !store.visiblePhotos.isEmpty { showSlideshow = true }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .lightTableRequested)) { _ in
-            if !store.visiblePhotos.isEmpty { showLightTable = true }
-        }
-        .sheet(isPresented: $showExport) {
-            ExportSheet(store: store, isPresented: $showExport)
-        }
-        .sheet(isPresented: $showSlideshow) {
-            SlideshowView(store: store, isPresented: $showSlideshow)
-        }
-        .sheet(isPresented: $showLightTable) {
-            LightTableView(store: store, isPresented: $showLightTable)
-        }
-        .onAppear { autoOpenIfNeeded() }
-        .alert("Library error",
-               isPresented: Binding(get: { store.errorMessage != nil },
-                                    set: { if !$0 { store.errorMessage = nil } })) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(store.errorMessage ?? "")
-        }
+    }
+
+    /// Notification handlers + the error alert, hung off a trivial base view so
+    /// the type-checker handles the long chain quickly.
+    private var eventHandlers: some View {
+        Color.clear
+            .onReceive(NotificationCenter.default.publisher(for: .openLibraryRequested)) { _ in openLibrary() }
+            .onReceive(NotificationCenter.default.publisher(for: .newLibraryRequested)) { _ in newLibrary() }
+            .onReceive(NotificationCenter.default.publisher(for: .closeLibraryRequested)) { _ in store.closeLibrary() }
+            .onReceive(NotificationCenter.default.publisher(for: .duplicateVersionRequested)) { _ in duplicateSelected() }
+            .onReceive(NotificationCenter.default.publisher(for: .moveToTrashRequested)) { _ in store.moveSelectionToTrash() }
+            .onReceive(NotificationCenter.default.publisher(for: .restoreRequested)) { _ in
+                if let p = store.selectedPhoto { store.restoreFromTrash(p) }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .emptyTrashRequested)) { _ in confirmEmptyTrash() }
+            .onReceive(NotificationCenter.default.publisher(for: .exportRequested)) { _ in
+                if store.library != nil { showExport = true }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .slideshowRequested)) { _ in
+                if !store.visiblePhotos.isEmpty { showSlideshow = true }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .lightTableRequested)) { _ in
+                if !store.visiblePhotos.isEmpty { showLightTable = true }
+            }
+            .alert("Library error",
+                   isPresented: Binding(get: { store.errorMessage != nil },
+                                        set: { if !$0 { store.errorMessage = nil } })) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(store.errorMessage ?? "")
+            }
+    }
+
+    private var sheets: some View {
+        Color.clear
+            .sheet(isPresented: $showExport) { ExportSheet(store: store, isPresented: $showExport) }
+            .sheet(isPresented: $showSlideshow) { SlideshowView(store: store, isPresented: $showSlideshow) }
+            .sheet(isPresented: $showLightTable) { LightTableView(store: store, isPresented: $showLightTable) }
     }
 
     // MARK: - Center column
