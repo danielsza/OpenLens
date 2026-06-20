@@ -83,6 +83,30 @@ final class ImportTests: XCTestCase {
         XCTAssertEqual(masters.count, 1)                      // sharing one master
     }
 
+    func testSetIPTCMetadata() throws {
+        let libURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("OpenLens-iptc-\(UUID().uuidString).aplibrary")
+        defer { try? FileManager.default.removeItem(at: libURL) }
+        let created = try ApertureLibraryCreator.createLibrary(at: libURL, firstProjectNamed: "P")
+        let projectUuid = try XCTUnwrap(created.projects().first?.id)
+        let source = FileManager.default.temporaryDirectory.appendingPathComponent("iptc-\(UUID().uuidString).png")
+        defer { try? FileManager.default.removeItem(at: source) }
+        try makePNG(source, width: 24, height: 16)
+
+        let writer = ApertureLibraryWriter(libraryURL: libURL, allowWrites: true)
+        let v = try writer.importImage(at: source, intoProject: projectUuid)
+        try writer.setIPTC(versionUuid: v, caption: "A nice view", title: "Vista",
+                           byline: "Daniel", copyright: "© Daniel")
+
+        let lib = try ApertureLibrary(url: libURL)
+        let photo = try XCTUnwrap(lib.photos().first { $0.id == v })
+        let meta = try XCTUnwrap(lib.metadata(for: photo))
+        XCTAssertEqual(meta.caption, "A nice view")
+        XCTAssertEqual(meta.title, "Vista")
+        XCTAssertEqual(meta.byline, "Daniel")
+        XCTAssertEqual(meta.copyright, "© Daniel")
+    }
+
     func testImportRequiresOptIn() throws {
         let libURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("OpenLens-import-\(UUID().uuidString).aplibrary")

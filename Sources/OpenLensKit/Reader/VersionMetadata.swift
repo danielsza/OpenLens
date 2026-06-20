@@ -24,9 +24,12 @@ public struct VersionMetadata: Hashable {
     public var latitude: Double?
     public var longitude: Double?
 
-    // Rights
+    // Rights / IPTC
     public var artist: String?
     public var copyright: String?
+    public var caption: String?
+    public var title: String?
+    public var byline: String?
 
     // Proxy (thumbnail/preview) bookkeeping, relative to the library's
     // `Thumbnails/` directory.
@@ -145,6 +148,9 @@ public extension ApertureLibrary {
         m.longitude = (exif["Longitude"] as? NSNumber)?.doubleValue
         m.artist = (exif["Artist"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
         m.copyright = (iptc["CopyrightNotice"] as? String) ?? (exif["Copyright"] as? String)
+        m.caption = (iptc["Caption"] as? String) ?? (iptc["Caption/Abstract"] as? String)
+        m.title = (iptc["Title"] as? String) ?? (iptc["ObjectName"] as? String)
+        m.byline = (iptc["Byline"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
 
         m.thumbnailPath = proxy["thumbnailPath"] as? String
         m.miniThumbnailPath = proxy["miniThumbnailPath"] as? String

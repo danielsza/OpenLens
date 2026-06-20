@@ -10,6 +10,10 @@ struct InfoInspector: View {
     @State private var meta: VersionMetadata?
     @State private var keywords: [String] = []
     @State private var newKeyword: String = ""
+    @State private var captionField = ""
+    @State private var titleField = ""
+    @State private var bylineField = ""
+    @State private var copyrightField = ""
 
     var body: some View {
         if let photo = store.selectedPhoto {
@@ -43,6 +47,9 @@ struct InfoInspector: View {
                     keywordEditor(photo)
 
                     Divider()
+                    iptcEditor(photo)
+
+                    Divider()
                     Button { openInExternalEditor(photo) } label: {
                         Label("Open in External Editor", systemImage: "square.and.pencil")
                     }
@@ -65,6 +72,10 @@ struct InfoInspector: View {
         preview = nil
         guard let library = store.library else { return }
         self.meta = library.metadata(for: photo)
+        self.captionField = meta?.caption ?? ""
+        self.titleField = meta?.title ?? ""
+        self.bylineField = meta?.byline ?? ""
+        self.copyrightField = meta?.copyright ?? ""
         self.keywords = (try? library.keywords(for: photo)) ?? []
         let url = library.displayImageURL(for: photo)
         let cg = await Task.detached(priority: .userInitiated) { () -> CGImage? in
@@ -129,6 +140,31 @@ struct InfoInspector: View {
                 .textFieldStyle(.roundedBorder)
                 .onSubmit { addKeyword(photo) }
         }
+    }
+
+    @ViewBuilder
+    private func iptcEditor(_ photo: Photo) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Metadata").font(.caption).foregroundStyle(.secondary)
+            labeledField("Title", text: $titleField) { save(photo) }
+            labeledField("Caption", text: $captionField) { save(photo) }
+            labeledField("Byline", text: $bylineField) { save(photo) }
+            labeledField("Copyright", text: $copyrightField) { save(photo) }
+        }
+    }
+
+    private func labeledField(_ label: String, text: Binding<String>, onCommit: @escaping () -> Void) -> some View {
+        HStack {
+            Text(label).font(.caption2).foregroundStyle(.secondary).frame(width: 64, alignment: .leading)
+            TextField(label, text: text).textFieldStyle(.roundedBorder).font(.caption)
+                .onSubmit(onCommit)
+        }
+    }
+
+    private func save(_ photo: Photo) {
+        store.setIPTC(photo,
+                      caption: captionField, title: titleField,
+                      byline: bylineField, copyright: copyrightField)
     }
 
     private func addKeyword(_ photo: Photo) {

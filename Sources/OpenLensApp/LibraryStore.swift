@@ -205,6 +205,15 @@ final class LibraryStore: ObservableObject {
         catch { errorMessage = "Couldn't rename album: \(error)" }
     }
 
+    func setIPTC(_ photo: Photo, caption: String? = nil, title: String? = nil,
+                 byline: String? = nil, copyright: String? = nil) {
+        guard let w = makeWriter() else { return }
+        do {
+            try w.setIPTC(versionUuid: photo.version.id, caption: caption,
+                          title: title, byline: byline, copyright: copyright)
+        } catch { errorMessage = "Couldn't save metadata: \(error)" }
+    }
+
     @discardableResult
     func addKeyword(_ name: String, to photo: Photo) -> Bool {
         guard let w = makeWriter() else { return false }

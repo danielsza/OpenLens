@@ -224,6 +224,10 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
 - **2026-06-19** Slideshow (auto-advance, play/pause, interval, nav) and Light
   Table (freeform drag canvas, resize, auto-arrange) — View menu (⌥⌘S / ⌥⌘L).
 
+- **2026-06-19** IPTC metadata editing: read+write caption/title/byline/
+  copyright (`setIPTC` patches the `.apversion` plist); editable fields in the
+  Info inspector. + test.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

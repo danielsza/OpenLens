@@ -86,6 +86,34 @@ public final class ApertureLibraryWriter {
                           iptcStarRating: nil)
     }
 
+    // MARK: - IPTC metadata
+
+    /// Edits IPTC fields on a version's `.apversion` plist. Only the provided
+    /// (non-nil) fields are changed. (The reader sources these from the plist;
+    /// updating `Properties.apdb`'s search index is a later refinement.)
+    public func setIPTC(versionUuid uuid: String, caption: String? = nil,
+                        title: String? = nil, byline: String? = nil,
+                        copyright: String? = nil) throws {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: true)
+        guard let plistURL = try locateVersionPlist(forVersionUuid: uuid, using: db) else {
+            throw WriteError.plistNotFound(uuid)
+        }
+        var format = PropertyListSerialization.PropertyListFormat.binary
+        let data = try Data(contentsOf: plistURL)
+        guard var plist = try PropertyListSerialization.propertyList(
+            from: data, options: [], format: &format) as? [String: Any] else { return }
+        var iptc = plist["iptcProperties"] as? [String: Any] ?? [:]
+        if let c = caption { iptc["Caption"] = c; iptc["Caption/Abstract"] = c }
+        if let t = title { iptc["Title"] = t; iptc["ObjectName"] = t }
+        if let b = byline { iptc["Byline"] = b }
+        if let cp = copyright { iptc["CopyrightNotice"] = cp }
+        plist["iptcProperties"] = iptc
+        plist["plistWriteTimestamp"] = Date()
+        let out = try PropertyListSerialization.data(fromPropertyList: plist, format: format, options: 0)
+        try out.write(to: plistURL, options: .atomic)
+    }
+
     // MARK: - Structure (projects / albums)
 
     /// Creates a new project under the "Projects" container and returns its uuid.
