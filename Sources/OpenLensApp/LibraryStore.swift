@@ -193,6 +193,19 @@ final class LibraryStore: ObservableObject {
         catch { errorMessage = "Couldn't restore: \(error)" }
     }
 
+    @discardableResult
+    func addKeyword(_ name: String, to photo: Photo) -> Bool {
+        guard let w = makeWriter() else { return false }
+        do { try w.addKeyword(name, toVersion: photo.version.id); return true }
+        catch { errorMessage = "Couldn't add keyword: \(error)"; return false }
+    }
+
+    func removeKeyword(_ name: String, from photo: Photo) {
+        guard let w = makeWriter() else { return }
+        do { try w.removeKeyword(name, fromVersion: photo.version.id) }
+        catch { errorMessage = "Couldn't remove keyword: \(error)" }
+    }
+
     func emptyTrash() {
         guard let w = makeWriter() else { return }
         do { _ = try w.emptyTrash(); reload() }

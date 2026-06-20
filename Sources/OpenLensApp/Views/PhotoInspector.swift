@@ -9,6 +9,7 @@ struct InfoInspector: View {
     @State private var preview: NSImage?
     @State private var meta: VersionMetadata?
     @State private var keywords: [String] = []
+    @State private var newKeyword: String = ""
 
     var body: some View {
         if let photo = store.selectedPhoto {
@@ -39,12 +40,7 @@ struct InfoInspector: View {
                     Divider()
                     metadata(photo)
 
-                    if !keywords.isEmpty {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Keywords").font(.caption).foregroundStyle(.secondary)
-                            Text(keywords.joined(separator: ", ")).font(.caption)
-                        }
-                    }
+                    keywordEditor(photo)
 
                     Divider()
                     Button { openInExternalEditor(photo) } label: {
@@ -104,6 +100,45 @@ struct InfoInspector: View {
             }
         }
         .font(.caption)
+    }
+
+    @ViewBuilder
+    private func keywordEditor(_ photo: Photo) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Keywords").font(.caption).foregroundStyle(.secondary)
+            if !keywords.isEmpty {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 70), spacing: 6)], alignment: .leading, spacing: 6) {
+                    ForEach(keywords, id: \.self) { kw in
+                        HStack(spacing: 3) {
+                            Text(kw).font(.caption2).lineLimit(1)
+                            Button {
+                                store.removeKeyword(kw, from: photo)
+                                keywords.removeAll { $0 == kw }
+                            } label: {
+                                Image(systemName: "xmark.circle.fill").font(.system(size: 9))
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal, 6).padding(.vertical, 3)
+                        .background(Capsule().fill(.quaternary))
+                    }
+                }
+            }
+            TextField("Add keyword", text: $newKeyword)
+                .textFieldStyle(.roundedBorder)
+                .onSubmit { addKeyword(photo) }
+        }
+    }
+
+    private func addKeyword(_ photo: Photo) {
+        let name = newKeyword.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, !keywords.contains(name) else { newKeyword = ""; return }
+        if store.addKeyword(name, to: photo) {
+            keywords.append(name)
+            keywords.sort()
+        }
+        newKeyword = ""
     }
 
     private func row(_ label: String, _ value: String) -> some View {
