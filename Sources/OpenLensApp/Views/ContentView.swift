@@ -13,6 +13,7 @@ struct ContentView: View {
     var body: some View {
         mainView
             .background(eventHandlers)
+            .background(photoEventHandlers)
             .background(sheets)
             .onAppear { autoOpenIfNeeded() }
     }
@@ -41,14 +42,6 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .openLibraryRequested)) { _ in openLibrary() }
             .onReceive(NotificationCenter.default.publisher(for: .newLibraryRequested)) { _ in newLibrary() }
             .onReceive(NotificationCenter.default.publisher(for: .closeLibraryRequested)) { _ in store.closeLibrary() }
-            .onReceive(NotificationCenter.default.publisher(for: .duplicateVersionRequested)) { _ in duplicateSelected() }
-            .onReceive(NotificationCenter.default.publisher(for: .rotateLeftRequested)) { _ in store.rotateSelection(clockwise: false) }
-            .onReceive(NotificationCenter.default.publisher(for: .rotateRightRequested)) { _ in store.rotateSelection(clockwise: true) }
-            .onReceive(NotificationCenter.default.publisher(for: .moveToTrashRequested)) { _ in store.moveSelectionToTrash() }
-            .onReceive(NotificationCenter.default.publisher(for: .restoreRequested)) { _ in
-                if let p = store.selectedPhoto { store.restoreFromTrash(p) }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .emptyTrashRequested)) { _ in confirmEmptyTrash() }
             .onReceive(NotificationCenter.default.publisher(for: .exportRequested)) { _ in
                 if store.library != nil { showExport = true }
             }
@@ -65,6 +58,18 @@ struct ContentView: View {
             } message: {
                 Text(store.errorMessage ?? "")
             }
+    }
+
+    private var photoEventHandlers: some View {
+        Color.clear
+            .onReceive(NotificationCenter.default.publisher(for: .duplicateVersionRequested)) { _ in duplicateSelected() }
+            .onReceive(NotificationCenter.default.publisher(for: .rotateLeftRequested)) { _ in store.rotateSelection(clockwise: false) }
+            .onReceive(NotificationCenter.default.publisher(for: .rotateRightRequested)) { _ in store.rotateSelection(clockwise: true) }
+            .onReceive(NotificationCenter.default.publisher(for: .moveToTrashRequested)) { _ in store.moveSelectionToTrash() }
+            .onReceive(NotificationCenter.default.publisher(for: .restoreRequested)) { _ in
+                if let p = store.selectedPhoto { store.restoreFromTrash(p) }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .emptyTrashRequested)) { _ in confirmEmptyTrash() }
     }
 
     private var sheets: some View {
