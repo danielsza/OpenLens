@@ -63,6 +63,10 @@ struct OpenLensApp: App {
                 }
                 .keyboardShortcut("]")
                 Divider()
+                Button("Auto-Stack by Time") {
+                    NotificationCenter.default.post(name: .autoStackRequested, object: nil)
+                }
+                Divider()
                 Button("Move to Trash") {
                     NotificationCenter.default.post(name: .moveToTrashRequested, object: nil)
                 }
@@ -83,6 +87,7 @@ extension Notification.Name {
     static let duplicateVersionRequested = Notification.Name("duplicateVersionRequested")
     static let rotateLeftRequested = Notification.Name("rotateLeftRequested")
     static let rotateRightRequested = Notification.Name("rotateRightRequested")
+    static let autoStackRequested = Notification.Name("autoStackRequested")
     static let moveToTrashRequested = Notification.Name("moveToTrashRequested")
     static let restoreRequested = Notification.Name("restoreRequested")
     static let emptyTrashRequested = Notification.Name("emptyTrashRequested")

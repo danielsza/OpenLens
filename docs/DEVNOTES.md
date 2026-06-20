@@ -239,6 +239,10 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   album (File ▸ Save Filter as Smart Album…), persisted (UserDefaults/Codable),
   listed in the sidebar; PhotoFilter is now Codable.
 
+- **2026-06-19** Auto-stack by time: `[Photo].autoStackGroups(gapSeconds:)` +
+  Photo ▸ Auto-Stack by Time (stacks runs of close-in-time photos). + test.
+  This completes the "buildable without input" Aperture parity list.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

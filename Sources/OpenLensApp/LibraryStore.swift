@@ -183,6 +183,17 @@ final class LibraryStore: ObservableObject {
     func setColorLabelForSelection(_ label: Int) {
         selectionPhotos().forEach { setColorLabel(label, for: $0) }
     }
+    /// Auto-stacks the visible photos by capture-time proximity.
+    func autoStack(gapSeconds: TimeInterval = 8) {
+        guard let w = makeWriter() else { return }
+        let groups = visiblePhotos.autoStackGroups(gapSeconds: gapSeconds).filter { $0.count > 1 }
+        guard !groups.isEmpty else { errorMessage = "No photos close enough in time to stack."; return }
+        do {
+            for g in groups { try w.createStack(versionUuids: g.map { $0.id }, pick: g.first?.id) }
+            reload()
+        } catch { errorMessage = "Couldn't auto-stack: \(error)" }
+    }
+
     func rotateSelection(clockwise: Bool) {
         guard let w = makeWriter() else { return }
         do {

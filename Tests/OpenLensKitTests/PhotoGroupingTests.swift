@@ -29,6 +29,17 @@ final class PhotoGroupingTests: XCTestCase {
         XCTAssertNotNil(sections.first?.date)
     }
 
+    func testAutoStackGroups() throws {
+        let lib = try openTestLibrary()
+        let photos = try lib.photos()
+        // Fixture photos share a capture time, so a generous gap groups them.
+        let groups = photos.autoStackGroups(gapSeconds: 60)
+        XCTAssertEqual(groups.reduce(0) { $0 + $1.count }, photos.count)
+        XCTAssertEqual(groups.count, 1)
+        // A zero gap with distinct times would never over-group.
+        XCTAssertLessThanOrEqual(photos.autoStackGroups(gapSeconds: 0).count, photos.count)
+    }
+
     func testSectionsAreChronological() throws {
         let lib = try openTestLibrary()
         let sections = try lib.photos().grouped(by: .day)

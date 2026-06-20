@@ -26,6 +26,9 @@ struct ContentView: View {
                     store.addSmartAlbum(named: name)
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .autoStackRequested)) { _ in
+                store.autoStack()
+            }
     }
 
     private var mainView: some View {

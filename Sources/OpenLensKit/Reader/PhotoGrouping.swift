@@ -44,6 +44,27 @@ public extension Array where Element == Photo {
         return sections
     }
 
+    /// Groups photos (by capture time) into runs where each photo is within
+    /// `gapSeconds` of the previous — the basis for auto-stacking.
+    func autoStackGroups(gapSeconds: TimeInterval) -> [[Photo]] {
+        let ordered = sorted { ($0.version.imageDate ?? .distantPast) < ($1.version.imageDate ?? .distantPast) }
+        var groups: [[Photo]] = []
+        var current: [Photo] = []
+        var last: Date?
+        for p in ordered {
+            let d = p.version.imageDate
+            if let last, let d, d.timeIntervalSince(last) <= gapSeconds {
+                current.append(p)
+            } else {
+                if !current.isEmpty { groups.append(current) }
+                current = [p]
+            }
+            if let d { last = d }
+        }
+        if !current.isEmpty { groups.append(current) }
+        return groups
+    }
+
     private static func bucketDate(_ date: Date, _ g: DateGranularity,
                                    _ cal: Calendar) -> Date {
         let comps: Set<Calendar.Component>
