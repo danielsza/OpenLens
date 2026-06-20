@@ -37,6 +37,20 @@ struct ProjectSidebar: View {
                 }
             }
 
+            if !store.savedSmartAlbums.isEmpty {
+                Section("Smart Albums") {
+                    ForEach(store.savedSmartAlbums) { sa in
+                        row(title: sa.name,
+                            systemImage: "sparkles",
+                            count: nil,
+                            isSelected: store.selectedSmartAlbumID == sa.id) {
+                            store.applySmartAlbum(sa.id)
+                        }
+                        .contextMenu { Button("Delete") { store.deleteSmartAlbum(sa.id) } }
+                    }
+                }
+            }
+
             if !store.userAlbums.isEmpty {
                 Section("Albums") {
                     ForEach(store.userAlbums) { album in

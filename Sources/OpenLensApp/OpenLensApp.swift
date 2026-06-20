@@ -34,6 +34,9 @@ struct OpenLensApp: App {
                     NotificationCenter.default.post(name: .exportRequested, object: nil)
                 }
                 .keyboardShortcut("e", modifiers: [.command, .shift])
+                Button("Save Filter as Smart Album…") {
+                    NotificationCenter.default.post(name: .saveSmartAlbumRequested, object: nil)
+                }
             }
             CommandMenu("View") {
                 Button("Start Slideshow") {
@@ -84,6 +87,7 @@ extension Notification.Name {
     static let restoreRequested = Notification.Name("restoreRequested")
     static let emptyTrashRequested = Notification.Name("emptyTrashRequested")
     static let exportRequested = Notification.Name("exportRequested")
+    static let saveSmartAlbumRequested = Notification.Name("saveSmartAlbumRequested")
     static let slideshowRequested = Notification.Name("slideshowRequested")
     static let lightTableRequested = Notification.Name("lightTableRequested")
     static let openLibraryRequested = Notification.Name("openLibraryRequested")

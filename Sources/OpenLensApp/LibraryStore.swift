@@ -51,6 +51,45 @@ final class LibraryStore: ObservableObject {
     @Published var sort: PhotoSort = .date
     @Published var sortAscending = true
 
+    /// OpenLens-native smart album: a named saved filter.
+    struct SmartAlbum: Identifiable, Codable, Hashable {
+        var id = UUID().uuidString
+        var name: String
+        var filter: PhotoFilter
+    }
+    @Published var savedSmartAlbums: [SmartAlbum] = [] { didSet { persistSmartAlbums() } }
+    @Published var selectedSmartAlbumID: String?
+
+    private let smartAlbumsKey = "OpenLens.smartAlbums"
+
+    func loadSmartAlbums() {
+        if let data = UserDefaults.standard.data(forKey: smartAlbumsKey),
+           let decoded = try? JSONDecoder().decode([SmartAlbum].self, from: data) {
+            savedSmartAlbums = decoded
+        }
+    }
+    private func persistSmartAlbums() {
+        if let data = try? JSONEncoder().encode(savedSmartAlbums) {
+            UserDefaults.standard.set(data, forKey: smartAlbumsKey)
+        }
+    }
+    func addSmartAlbum(named name: String) {
+        savedSmartAlbums.append(SmartAlbum(name: name, filter: filter))
+    }
+    func deleteSmartAlbum(_ id: String) {
+        savedSmartAlbums.removeAll { $0.id == id }
+        if selectedSmartAlbumID == id { selectedSmartAlbumID = nil }
+    }
+    func applySmartAlbum(_ id: String) {
+        guard let sa = savedSmartAlbums.first(where: { $0.id == id }) else { return }
+        selectedProjectID = nil
+        selectedAlbumID = nil
+        selectedSource = nil
+        selectedSmartAlbumID = id
+        filter = sa.filter
+        clearSelection()
+    }
+
     var visiblePhotos: [Photo] {
         let base: [Photo]
         if let source = selectedSource {
@@ -73,6 +112,7 @@ final class LibraryStore: ObservableObject {
     func selectProject(_ id: String?) {
         selectedSource = nil
         selectedAlbumID = nil
+        selectedSmartAlbumID = nil
         selectedProjectID = id
         clearSelection()
     }
@@ -80,6 +120,7 @@ final class LibraryStore: ObservableObject {
     func selectAlbum(_ id: String?) {
         selectedSource = nil
         selectedProjectID = nil
+        selectedSmartAlbumID = nil
         selectedAlbumID = id
         clearSelection()
     }
@@ -87,6 +128,7 @@ final class LibraryStore: ObservableObject {
     func selectSource(_ source: LibrarySource?) {
         selectedProjectID = nil
         selectedAlbumID = nil
+        selectedSmartAlbumID = nil
         selectedSource = source
         clearSelection()
     }
@@ -95,6 +137,8 @@ final class LibraryStore: ObservableObject {
         selectedPhotoID = nil
         selectedPhotoIDs = []
     }
+
+    private func clearSmartAlbumSelection() { selectedSmartAlbumID = nil }
 
     // MARK: - Multi-selection
 

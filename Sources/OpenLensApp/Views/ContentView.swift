@@ -14,8 +14,18 @@ struct ContentView: View {
         mainView
             .background(eventHandlers)
             .background(photoEventHandlers)
+            .background(smartAlbumHandler)
             .background(sheets)
-            .onAppear { autoOpenIfNeeded() }
+            .onAppear { store.loadSmartAlbums(); autoOpenIfNeeded() }
+    }
+
+    private var smartAlbumHandler: some View {
+        Color.clear
+            .onReceive(NotificationCenter.default.publisher(for: .saveSmartAlbumRequested)) { _ in
+                if let name = promptForName(title: "Save Smart Album", placeholder: "Smart album name") {
+                    store.addSmartAlbum(named: name)
+                }
+            }
     }
 
     private var mainView: some View {

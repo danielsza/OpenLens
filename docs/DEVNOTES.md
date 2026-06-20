@@ -235,6 +235,10 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   (⌘[ / ⌘]); ImageCache bakes `RKVersion.rotation` into displayed images
   (cache keyed by rotation). + test.
 
+- **2026-06-19** Native smart albums: save the current filter as a named smart
+  album (File ▸ Save Filter as Smart Album…), persisted (UserDefaults/Codable),
+  listed in the sidebar; PhotoFilter is now Codable.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

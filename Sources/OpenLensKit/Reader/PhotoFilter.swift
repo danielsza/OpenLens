@@ -2,7 +2,7 @@ import Foundation
 
 /// A pure, composable filter over photos — the basis of an Aperture-style
 /// filter bar. Kept UI-free so it can be tested and reused.
-public struct PhotoFilter: Equatable {
+public struct PhotoFilter: Equatable, Codable {
     /// Minimum star rating (0 keeps everything).
     public var minRating: Int = 0
     /// Keep only flagged photos.
