@@ -122,7 +122,7 @@ final class ImportTests: XCTestCase {
         try writer.rotate(v, clockwise: true, currentRotation: 0)
 
         let lib = try ApertureLibrary(url: libURL)
-        XCTAssertEqual(lib.photos().first { $0.id == v }?.version.rotation, 90)
+        XCTAssertEqual(try lib.photos().first { $0.id == v }?.version.rotation, 90)
     }
 
     func testImportRequiresOptIn() throws {
