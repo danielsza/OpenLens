@@ -98,6 +98,46 @@ public enum ImageLoader {
         return out
     }
 
+    /// RGB + luminance histogram (bucketed counts) for an image.
+    public struct Histogram: Equatable {
+        public let red: [Int]
+        public let green: [Int]
+        public let blue: [Int]
+        public let luminance: [Int]
+        public var bucketCount: Int { luminance.count }
+    }
+
+    /// Computes a histogram by sampling a downsampled copy of the image.
+    public static func histogram(at url: URL, sampleMax: Int = 160, buckets: Int = 64) -> Histogram? {
+        guard let cg = cgImage(at: url, maxPixelSize: sampleMax) else { return nil }
+        let w = cg.width, h = cg.height
+        guard w > 0, h > 0 else { return nil }
+        let cs = CGColorSpaceCreateDeviceRGB()
+        var data = [UInt8](repeating: 0, count: w * h * 4)
+        let bmp = CGImageAlphaInfo.premultipliedLast.rawValue
+        guard let ctx = data.withUnsafeMutableBytes({ raw in
+            CGContext(data: raw.baseAddress, width: w, height: h, bitsPerComponent: 8,
+                      bytesPerRow: w * 4, space: cs, bitmapInfo: bmp)
+        }) else { return nil }
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+
+        var r = [Int](repeating: 0, count: buckets)
+        var g = [Int](repeating: 0, count: buckets)
+        var b = [Int](repeating: 0, count: buckets)
+        var l = [Int](repeating: 0, count: buckets)
+        var i = 0
+        while i < data.count {
+            let R = Int(data[i]), G = Int(data[i + 1]), B = Int(data[i + 2])
+            r[R * buckets / 256] += 1
+            g[G * buckets / 256] += 1
+            b[B * buckets / 256] += 1
+            let lum = Int(0.299 * Double(R) + 0.587 * Double(G) + 0.114 * Double(B))
+            l[min(buckets - 1, lum * buckets / 256)] += 1
+            i += 4
+        }
+        return Histogram(red: r, green: g, blue: b, luminance: l)
+    }
+
     /// GPS coordinate (signed lat, lon) from an image's metadata, if present.
     public static func gpsCoordinate(at url: URL) -> (latitude: Double, longitude: Double)? {
         guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),

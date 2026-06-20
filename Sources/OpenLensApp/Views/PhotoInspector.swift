@@ -196,11 +196,19 @@ struct InfoInspector: View {
 struct AdjustmentsInspector: View {
     @ObservedObject var store: LibraryStore
     @State private var adjustments: [String] = []
+    @State private var histogram: ImageLoader.Histogram?
 
     var body: some View {
         if let photo = store.selectedPhoto {
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
+                    Text("Histogram").font(.headline)
+                    HistogramView(histogram: histogram)
+                        .frame(height: 90)
+                        .background(Color.black.opacity(0.25))
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+
+                    Divider()
                     Text("Adjustments").font(.headline)
                     if adjustments.isEmpty {
                         Text("No adjustments on this photo")
@@ -218,15 +226,41 @@ struct AdjustmentsInspector: View {
                 .padding()
             }
             .background(Theme.panel)
-            .task(id: photo.id) {
-                if let lib = store.library {
-                    adjustments = (try? lib.enabledAdjustmentNames(for: photo)) ?? []
-                } else {
-                    adjustments = []
-                }
-            }
+            .task(id: photo.id) { await load(photo) }
         } else {
             ZStack { Theme.panel; Text("Select a photo").foregroundStyle(.secondary) }
+        }
+    }
+
+    private func load(_ photo: Photo) async {
+        guard let lib = store.library else { adjustments = []; histogram = nil; return }
+        adjustments = (try? lib.enabledAdjustmentNames(for: photo)) ?? []
+        histogram = nil
+        let url = lib.displayImageURL(for: photo)
+        histogram = await Task.detached(priority: .utility) {
+            ImageLoader.histogram(at: url)
+        }.value
+    }
+}
+
+/// Draws a luminance histogram as bars.
+private struct HistogramView: View {
+    let histogram: ImageLoader.Histogram?
+    var body: some View {
+        GeometryReader { geo in
+            if let h = histogram, let maxV = h.luminance.max(), maxV > 0 {
+                HStack(alignment: .bottom, spacing: 1) {
+                    ForEach(Array(h.luminance.enumerated()), id: \.offset) { _, v in
+                        Rectangle()
+                            .fill(.white.opacity(0.8))
+                            .frame(height: geo.size.height * CGFloat(v) / CGFloat(maxV))
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            } else {
+                Text("—").foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
     }
 }
