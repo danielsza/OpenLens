@@ -68,6 +68,9 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 codesign --force --deep --sign - "$APP" 2>/dev/null || true
 
+# Replace (never merge into) any existing Desktop copy — cp -R into an
+# existing .app would nest the new bundle inside the old one.
+rm -rf "$HOME/Desktop/OpenLens.app"
 cp -R "$APP" "$HOME/Desktop/OpenLens.app" 2>/dev/null && DESK=" and ~/Desktop/OpenLens.app" || DESK=""
 echo
 echo "✅ Done: $(pwd)/$APP$DESK"
