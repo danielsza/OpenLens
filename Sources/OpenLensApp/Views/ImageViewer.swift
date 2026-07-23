@@ -32,5 +32,17 @@ struct ImageViewer: View {
         image = nil
         guard let lib = store.library, let photo = store.selectedPhoto else { return }
         image = await ImageCache.shared.fullImage(for: photo, in: lib)
+        // Prefetch neighbours so arrow-key browsing feels instant.
+        let photos = store.visiblePhotos
+        if let idx = photos.firstIndex(where: { $0.id == photo.id }) {
+            for offset in [1, -1] {
+                let n = idx + offset
+                guard photos.indices.contains(n) else { continue }
+                let neighbour = photos[n]
+                Task.detached(priority: .background) {
+                    _ = await ImageCache.shared.fullImage(for: neighbour, in: lib)
+                }
+            }
+        }
     }
 }

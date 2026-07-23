@@ -86,6 +86,54 @@ public final class ApertureLibraryWriter {
                           iptcStarRating: nil)
     }
 
+    // MARK: - Repair
+
+    /// Fixes what the consistency checker found. Safe, conservative actions:
+    /// dangling album/keyword rows are deleted; missing thumbnails/plists are
+    /// regenerated from the master; versions whose master *file* is missing are
+    /// marked (`RKMaster.isMissing`); orphan versions (no master row) go to the
+    /// trash. Returns the number of repairs performed.
+    @discardableResult
+    public func repair(_ report: ConsistencyReport, in library: ApertureLibrary) throws -> Int {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+        var fixed = 0
+        let photosByName = Dictionary(grouping: try library.photos(), by: { $0.version.name })
+
+        for issue in report.issues {
+            switch issue {
+            case .danglingAlbumEntry(let versionId):
+                try db.execute("DELETE FROM RKAlbumVersion WHERE versionId = ?",
+                               [.integer(Int64(versionId))])
+                fixed += 1
+            case .danglingKeywordEntry(let versionId):
+                try db.execute("DELETE FROM RKKeywordForVersion WHERE versionId = ?",
+                               [.integer(Int64(versionId))])
+                fixed += 1
+            case .orphanVersion(let uuid):
+                try db.execute("UPDATE RKVersion SET isInTrash = 1 WHERE uuid = ?", [.text(uuid)])
+                fixed += 1
+            case .missingMasterFile(let name, _):
+                for photo in photosByName[name] ?? [] {
+                    try db.execute("UPDATE RKMaster SET isMissing = 1 WHERE uuid = ?",
+                                   [.text(photo.master.id)])
+                }
+                fixed += 1
+            case .missingThumbnail(let name), .missingVersionPlist(let name):
+                for photo in photosByName[name] ?? [] {
+                    let masterURL = library.masterFileURL(for: photo.master)
+                    guard FileManager.default.fileExists(atPath: masterURL.path) else { continue }
+                    let datePath = (photo.master.imagePath as NSString).deletingLastPathComponent
+                    try? writeImportDerivatives(masterURL: masterURL, masterUuid: photo.master.id,
+                                                versionUuid: photo.version.id, name: photo.version.name,
+                                                projectUuid: photo.version.projectUuid, datePath: datePath)
+                    fixed += 1
+                }
+            }
+        }
+        return fixed
+    }
+
     // MARK: - Rotation
 
     /// Sets absolute rotation (degrees clockwise) on a version.

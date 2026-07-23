@@ -45,6 +45,42 @@ final class ConsistencyTests: XCTestCase {
         })
     }
 
+    func testRepairFixesDanglingRowsAndMissingThumbnail() throws {
+        let libURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("OpenLens-repair-\(UUID().uuidString).aplibrary")
+        defer { try? FileManager.default.removeItem(at: libURL) }
+        let created = try ApertureLibraryCreator.createLibrary(at: libURL, firstProjectNamed: "P")
+        let project = try XCTUnwrap(created.projects().first?.id)
+        let src = FileManager.default.temporaryDirectory.appendingPathComponent("r-\(UUID().uuidString).png")
+        defer { try? FileManager.default.removeItem(at: src) }
+        try makePNG(src, 32, 24)
+        let writer = ApertureLibraryWriter(libraryURL: libURL, allowWrites: true)
+        _ = try writer.importImage(at: src, intoProject: project)
+
+        // Damage: dangling album/keyword rows + delete the generated thumbnail.
+        let db = try SQLiteDatabase(path: libURL.appendingPathComponent("Database/apdb/Library.apdb").path,
+                                    readOnly: false)
+        try db.execute("INSERT INTO RKAlbumVersion(modelId, versionId, albumId) VALUES (999, 424242, 1)")
+        try db.execute("INSERT INTO RKKeywordForVersion(modelId, versionId, keywordId) VALUES (999, 424242, 1)")
+        let thumbs = libURL.appendingPathComponent("Thumbnails")
+        if let e = FileManager.default.enumerator(at: thumbs, includingPropertiesForKeys: nil) {
+            for case let f as URL in e where f.pathExtension == "jpg" {
+                try FileManager.default.removeItem(at: f)
+            }
+        }
+
+        var lib = try ApertureLibrary(url: libURL)
+        let before = try lib.checkConsistency()
+        XCTAssertFalse(before.isHealthy)
+
+        let fixed = try writer.repair(before, in: lib)
+        XCTAssertGreaterThanOrEqual(fixed, 3)
+
+        lib = try ApertureLibrary(url: libURL)
+        let after = try lib.checkConsistency()
+        XCTAssertTrue(after.isHealthy, "remaining: \(after.issues)")
+    }
+
     func testFixtureIsHealthy() throws {
         guard let path = ProcessInfo.processInfo.environment["OPENLENS_TEST_LIBRARY"] else {
             throw XCTSkip("Set OPENLENS_TEST_LIBRARY")

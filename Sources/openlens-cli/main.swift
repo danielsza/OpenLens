@@ -27,6 +27,7 @@ guard let libPath = args.first else {
       openlens-cli <library.aplibrary> --new-project <name>
       openlens-cli <library.aplibrary> --import <projectUuid> <file...>
       openlens-cli <library.aplibrary> --duplicate <versionUuid>
+      openlens-cli <library.aplibrary> --verify [--repair]
     """)
 }
 
@@ -85,11 +86,20 @@ do {
         print("Checked \(report.photosChecked) photo(s).")
         if report.isHealthy {
             print("Library is healthy ✓")
-        } else {
-            print("\(report.issues.count) issue(s):")
-            for issue in report.issues { print("  ⚠️  \(issue)") }
+            exit(0)
         }
-        exit(report.isHealthy ? 0 : 1)
+        print("\(report.issues.count) issue(s):")
+        for issue in report.issues { print("  ⚠️  \(issue)") }
+        if args.contains("--repair") {
+            let writer = ApertureLibraryWriter(libraryURL: libURL, allowWrites: true)
+            let fixed = try writer.repair(report, in: library)
+            print("Repaired \(fixed) issue(s).")
+            let after = try ApertureLibrary(url: libURL).checkConsistency()
+            print(after.isHealthy ? "Library is now healthy ✓"
+                                  : "\(after.issues.count) issue(s) remain.")
+            exit(after.isHealthy ? 0 : 1)
+        }
+        exit(1)
     }
 
     if args.contains("--search"), let i = args.firstIndex(of: "--search") {
