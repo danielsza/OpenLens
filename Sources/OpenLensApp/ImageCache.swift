@@ -37,6 +37,9 @@ final class ImageCache {
         let url = library.displayImageURL(for: photo)
         let isVideo = photo.master.isVideo
         let masterURL = library.masterFileURL(for: photo.master)
+        // Aperture's cached thumbnails/previews are ALREADY rotated; only the
+        // raw master needs the version's rotation applied.
+        let applyRotation = (url == masterURL) ? rotation : 0
         let cg = await Task.detached(priority: .utility) { () -> CGImage? in
             let base: CGImage?
             if isVideo {
@@ -47,7 +50,7 @@ final class ImageCache {
                 base = ImageLoader.cgImage(at: url, maxPixelSize: maxPixel)
             }
             guard let base else { return nil }
-            return ImageLoader.rotate(base, degrees: rotation)
+            return ImageLoader.rotate(base, degrees: applyRotation)
         }.value
         guard let cg else { return nil }
         let image = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
@@ -62,9 +65,11 @@ final class ImageCache {
         if let hit = cache.object(forKey: k) { return hit }
         // Prefer Aperture's rendered preview (reflects its edits) over the master.
         let url = library.viewerImageURL(for: photo)
+        // Previews/thumbnails are already rotated by Aperture; only rotate masters.
+        let applyRotation = (url == library.masterFileURL(for: photo.master)) ? rotation : 0
         let cg = await Task.detached(priority: .userInitiated) { () -> CGImage? in
             guard let base = ImageLoader.cgImage(at: url, maxPixelSize: 2400) else { return nil }
-            return ImageLoader.rotate(base, degrees: rotation)
+            return ImageLoader.rotate(base, degrees: applyRotation)
         }.value
         guard let cg else { return nil }
         let image = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))

@@ -165,18 +165,28 @@ struct ContentView: View {
                 Text("All").tag(0)
                 ForEach(1...5, id: \.self) { Text("\($0)★+").tag($0) }
             }
-            .pickerStyle(.menu).frame(width: 110)
+            .pickerStyle(.menu).fixedSize()
 
-            Toggle("Flagged", isOn: $store.filter.flaggedOnly).toggleStyle(.button)
-            Toggle("Edited", isOn: $store.filter.adjustedOnly).toggleStyle(.button)
+            Toggle(isOn: $store.filter.flaggedOnly) {
+                Image(systemName: "flag")
+            }
+            .toggleStyle(.button)
+            .help("Show only flagged photos")
+
+            Toggle(isOn: $store.filter.adjustedOnly) {
+                Image(systemName: "wrench")
+            }
+            .toggleStyle(.button)
+            .help("Show only edited photos")
 
             TextField("Filter by name", text: $store.filter.nameContains)
-                .textFieldStyle(.roundedBorder).frame(width: 160)
+                .textFieldStyle(.roundedBorder)
+                .frame(minWidth: 90, idealWidth: 150, maxWidth: 170)
 
             Picker("Sort", selection: $store.sort) {
                 ForEach(PhotoSort.allCases) { Text($0.rawValue).tag($0) }
             }
-            .pickerStyle(.menu).frame(width: 130)
+            .pickerStyle(.menu).fixedSize()
             Button {
                 store.sortAscending.toggle()
             } label: {
@@ -184,9 +194,11 @@ struct ContentView: View {
             }
             .help("Sort direction")
 
-            Spacer()
+            Spacer(minLength: 8)
             Text(statusText)
                 .foregroundStyle(Theme.textSecondary).font(.caption)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .padding(.horizontal, 12).padding(.vertical, 6)
         .background(Theme.panel)

@@ -295,6 +295,15 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   thumbnails; import detects video extensions (type VIDT); folder import
   accepts videos. Docs (CHANGELOG/README/STATUS) refreshed.
 
+- **2026-07-23** Fixes from Daniel's first real-library screenshots:
+  (1) `selectedPhoto` now also searches the trash — selecting in the Trash view
+  drives viewer/inspector/control bar; (2) filter bar compacted (icon toggles,
+  fixedSize pickers, non-wrapping status) so nothing truncates at narrow
+  widths; (3) **double-rotation fixed** — Aperture's cached thumbs/previews are
+  already rotated, so version rotation is applied only when displaying the raw
+  master. Known limitation: rotating in OpenLens doesn't refresh Aperture's
+  cached thumbs (stale orientation until thumbnails are regenerated).
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

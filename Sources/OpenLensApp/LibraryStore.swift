@@ -205,7 +205,10 @@ final class LibraryStore: ObservableObject {
     }
 
     var selectedPhoto: Photo? {
-        photos.first { $0.id == selectedPhotoID }
+        guard let id = selectedPhotoID else { return nil }
+        // Search live photos AND the trash, so selecting in the Trash view
+        // still drives the viewer/inspector/control bar.
+        return photos.first { $0.id == id } ?? trashed.first { $0.id == id }
     }
 
     private let lastLibraryKey = "OpenLens.lastLibraryPath"
