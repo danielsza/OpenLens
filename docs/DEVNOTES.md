@@ -254,6 +254,18 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   magnifier follows the cursor). Export now **preserves EXIF/TIFF/IPTC/GPS
   metadata** in rendered files (toggle in Export dialog, on by default) + test.
 
+- **2026-07-23** Validated the whole reader against a REAL library
+  (babcia.aplibrary, 676MB, 263 masters, 2006–2019, iPhoto-migrated): all
+  versions join, 30/30 plists matched, 30/30 thumbnails, zero dangling rows.
+  It has ratings/keywords/previews but **no adjustments** (still need an edited
+  library for that).
+- **2026-07-23** **Previews support**: layout verified as
+  `Previews/<master date path>/<version uuid>/<version name>.jpg` (27/27 real
+  previews resolve). New `previewURL(for:)` + `viewerImageURL(for:)`; the big
+  viewer now prefers previews. **KEY INSIGHT: previews are Aperture's rendered
+  output, so edited photos display with their edits applied even before we can
+  decode adjustments.** + test.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

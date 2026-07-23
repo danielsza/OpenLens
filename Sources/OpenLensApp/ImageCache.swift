@@ -38,7 +38,8 @@ final class ImageCache {
         let rotation = photo.version.rotation
         let k = key("\(photo.id)#\(rotation)", 0)
         if let hit = cache.object(forKey: k) { return hit }
-        let url = library.displayImageURL(for: photo)
+        // Prefer Aperture's rendered preview (reflects its edits) over the master.
+        let url = library.viewerImageURL(for: photo)
         let cg = await Task.detached(priority: .userInitiated) { () -> CGImage? in
             guard let base = ImageLoader.cgImage(at: url, maxPixelSize: 2400) else { return nil }
             return ImageLoader.rotate(base, degrees: rotation)
