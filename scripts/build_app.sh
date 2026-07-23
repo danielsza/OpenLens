@@ -28,7 +28,19 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN/OpenLensApp" "$APP/Contents/MacOS/OpenLens"
 cp "$BIN/openlens-cli" "$APP/Contents/MacOS/openlens-cli"
 cp build/OpenLens.icns "$APP/Contents/Resources/OpenLens.icns"
-cat > "$APP/Contents/Info.plist" <<'PLIST'
+
+# Bundle Sparkle.framework (auto-updates) and make its rpath portable.
+SPARKLE_FW="$(find .build -type d -name "Sparkle.framework" -path "*macos*" | head -1 || true)"
+if [ -n "$SPARKLE_FW" ]; then
+  mkdir -p "$APP/Contents/Frameworks"
+  cp -R "$SPARKLE_FW" "$APP/Contents/Frameworks/"
+  install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/OpenLens" 2>/dev/null || true
+fi
+
+# Sparkle public key for verifying updates (commit yours to scripts/sparkle_public_key.txt).
+SU_PUBLIC_KEY=""
+[ -f scripts/sparkle_public_key.txt ] && SU_PUBLIC_KEY="$(tr -d '[:space:]' < scripts/sparkle_public_key.txt)"
+cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -39,11 +51,14 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   <key>CFBundleExecutable</key><string>OpenLens</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>0.1.0</string>
-  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleVersion</key><string>0.1.0</string>
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSPrincipalClass</key><string>NSApplication</string>
   <key>CFBundleIconFile</key><string>OpenLens</string>
+  <key>SUFeedURL</key><string>https://github.com/danielsza/OpenLens/releases/latest/download/appcast.xml</string>
+  <key>SUPublicEDKey</key><string>${SU_PUBLIC_KEY}</string>
+  <key>SUEnableAutomaticChecks</key><true/>
 </dict>
 </plist>
 PLIST

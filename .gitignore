@@ -1,9 +1,9 @@
 # Swift / SwiftPM
 .build/
 .swiftpm/
-Package.resolved
 build/
 OpenLens.iconset/
+# Package.resolved is committed now that we have a dependency (Sparkle).
 
 # Xcode
 *.xcodeproj/xcuserdata/

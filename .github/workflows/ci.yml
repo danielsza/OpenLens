@@ -50,6 +50,12 @@ jobs:
           cp "$BIN/OpenLensApp" "$APP/Contents/MacOS/OpenLens"
           cp "$BIN/openlens-cli" "$APP/Contents/MacOS/openlens-cli"
           cp OpenLens.icns "$APP/Contents/Resources/OpenLens.icns"
+          SPARKLE_FW="$(find .build -type d -name "Sparkle.framework" -path "*macos*" | head -1 || true)"
+          if [ -n "$SPARKLE_FW" ]; then
+            mkdir -p "$APP/Contents/Frameworks"
+            cp -R "$SPARKLE_FW" "$APP/Contents/Frameworks/"
+            install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/OpenLens" || true
+          fi
           cat > "$APP/Contents/Info.plist" <<'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

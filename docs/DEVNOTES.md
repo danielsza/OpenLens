@@ -313,6 +313,14 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   sync DB + plist + IPTC. Notes table turned out to be focus-point blobs only —
   no user-notes feature needed. + test.
 
+- **2026-07-23** **Auto-updates via Sparkle 2**: SPM dependency (app target
+  only), `Check for Updates…` menu, Sparkle.framework bundled by build script +
+  CI + release workflow (portable rpath), `SUFeedURL` points at
+  releases/latest/download/appcast.xml, release workflow signs the zip with the
+  `SPARKLE_PRIVATE_KEY` secret and publishes the appcast. Daniel's one-time key
+  setup in docs/updates.md. Updates install without Gatekeeper nags (only the
+  first browser-downloaded install needs right-click ▸ Open).
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

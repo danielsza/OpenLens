@@ -15,6 +15,10 @@ let package = Package(
         // See docs/building.md for promoting this to a full Xcode app target.
         .executable(name: "OpenLensApp", targets: ["OpenLensApp"]),
     ],
+    dependencies: [
+        // Auto-updates (the app target only; the Kit stays dependency-free).
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.6.0")
+    ],
     targets: [
         .target(
             name: "OpenLensKit"
@@ -27,7 +31,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "OpenLensApp",
-            dependencies: ["OpenLensKit"]
+            dependencies: [
+                "OpenLensKit",
+                .product(name: "Sparkle", package: "Sparkle")
+            ]
         ),
         .testTarget(
             name: "OpenLensKitTests",

@@ -1,8 +1,19 @@
 import SwiftUI
 import AppKit
+import Sparkle
+
+/// Sparkle auto-update controller (checks the appcast published with each
+/// GitHub Release; updates install without Gatekeeper quarantine nags).
+final class UpdaterModel: ObservableObject {
+    let controller = SPUStandardUpdaterController(startingUpdater: true,
+                                                  updaterDelegate: nil,
+                                                  userDriverDelegate: nil)
+}
 
 @main
 struct OpenLensApp: App {
+    @StateObject private var updater = UpdaterModel()
+
     init() {
         // When run as a Swift Package executable (swift run OpenLensApp),
         // promote the process to a regular app so its window comes forward.
@@ -16,6 +27,11 @@ struct OpenLensApp: App {
                 .frame(minWidth: 900, minHeight: 600)
         }
         .commands {
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates…") {
+                    updater.controller.checkForUpdates(nil)
+                }
+            }
             CommandGroup(replacing: .newItem) {
                 Button("New Library…") {
                     NotificationCenter.default.post(name: .newLibraryRequested, object: nil)

@@ -35,11 +35,18 @@ jobs:
           set -eux
           BIN="$(swift build -c release --show-bin-path)"
           APP="OpenLens.app"
-          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+          VERSION="${GITHUB_REF_NAME#v}"
+          SU_PUBLIC_KEY=""
+          [ -f scripts/sparkle_public_key.txt ] && SU_PUBLIC_KEY="$(tr -d '[:space:]' < scripts/sparkle_public_key.txt)"
+          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
           cp "$BIN/OpenLensApp" "$APP/Contents/MacOS/OpenLens"
           cp "$BIN/openlens-cli" "$APP/Contents/MacOS/openlens-cli"
           cp OpenLens.icns "$APP/Contents/Resources/OpenLens.icns"
-          VERSION="${GITHUB_REF_NAME#v}"
+          SPARKLE_FW="$(find .build -type d -name "Sparkle.framework" -path "*macos*" | head -1 || true)"
+          if [ -n "$SPARKLE_FW" ]; then
+            cp -R "$SPARKLE_FW" "$APP/Contents/Frameworks/"
+            install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/OpenLens" || true
+          fi
           cat > "$APP/Contents/Info.plist" <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -56,17 +63,65 @@ jobs:
             <key>NSHighResolutionCapable</key><true/>
             <key>NSPrincipalClass</key><string>NSApplication</string>
             <key>CFBundleIconFile</key><string>OpenLens</string>
+            <key>SUFeedURL</key><string>https://github.com/danielsza/OpenLens/releases/latest/download/appcast.xml</string>
+            <key>SUPublicEDKey</key><string>${SU_PUBLIC_KEY}</string>
+            <key>SUEnableAutomaticChecks</key><true/>
           </dict>
           </plist>
           PLIST
           codesign --force --deep --sign - "$APP" || true
           ditto -c -k --keepParent "$APP" "OpenLens-${GITHUB_REF_NAME}.zip"
+      - name: Build appcast (Sparkle-signed update feed)
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -eu
+          ZIP="OpenLens-${GITHUB_REF_NAME}.zip"
+          VERSION="${GITHUB_REF_NAME#v}"
+          SIG_ATTR=""
+          if [ -n "${SPARKLE_PRIVATE_KEY:-}" ]; then
+            SPARKLE_BIN="$(find .build -type d -name bin -path "*Sparkle*" | head -1 || true)"
+            if [ -z "$SPARKLE_BIN" ] || [ ! -x "$SPARKLE_BIN/sign_update" ]; then
+              curl -sL -o /tmp/sparkle.tar.xz \
+                https://github.com/sparkle-project/Sparkle/releases/download/2.6.4/Sparkle-2.6.4.tar.xz
+              mkdir -p /tmp/sparkle && tar -xf /tmp/sparkle.tar.xz -C /tmp/sparkle
+              SPARKLE_BIN="/tmp/sparkle/bin"
+            fi
+            echo "$SPARKLE_PRIVATE_KEY" > /tmp/ed_key
+            # sign_update emits: sparkle:edSignature="…" length="…"
+            SIG_ATTR=" $("$SPARKLE_BIN/sign_update" "$ZIP" --ed-key-file /tmp/ed_key | tr -d '\n')"
+            rm -f /tmp/ed_key
+            echo "Signed update:$SIG_ATTR"
+          else
+            echo "SPARKLE_PRIVATE_KEY secret not set — publishing unsigned appcast."
+            SIG_ATTR=" length=\"$(stat -f%z "$ZIP")\""
+          fi
+          cat > appcast.xml <<XML
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>OpenLens</title>
+              <item>
+                <title>OpenLens ${VERSION}</title>
+                <sparkle:version>${VERSION}</sparkle:version>
+                <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
+                <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+                <link>https://github.com/danielsza/OpenLens/releases</link>
+                <enclosure
+                  url="https://github.com/danielsza/OpenLens/releases/download/${GITHUB_REF_NAME}/OpenLens-${GITHUB_REF_NAME}.zip"
+                  type="application/octet-stream"${SIG_ATTR}/>
+              </item>
+            </channel>
+          </rss>
+          XML
+          cat appcast.xml
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${GITHUB_REF_NAME}" \
             --title "OpenLens ${GITHUB_REF_NAME}" \
-            --notes "See CHANGELOG.md. Unsigned build: right-click ▸ Open on first launch, or run: xattr -dr com.apple.quarantine OpenLens.app" \
+            --notes "See CHANGELOG.md. First install: right-click ▸ Open (unsigned). Auto-updates via Sparkle afterwards." \
             "OpenLens-${GITHUB_REF_NAME}.zip" \
+            "appcast.xml" \
             ".build/release/openlens-cli#openlens-cli"
