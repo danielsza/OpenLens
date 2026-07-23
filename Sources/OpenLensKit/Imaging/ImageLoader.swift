@@ -62,11 +62,13 @@ public enum ImageLoader {
     /// must already exist.
     @discardableResult
     public static func writeJPEGThumbnail(from src: URL, to dest: URL,
-                                          maxPixel: Int = 1024, quality: Double = 0.85) -> CGSize? {
-        guard let cg = cgImage(at: src, maxPixelSize: maxPixel),
+                                          maxPixel: Int = 1024, quality: Double = 0.85,
+                                          rotateDegrees: Int = 0) -> CGSize? {
+        guard var cg = cgImage(at: src, maxPixelSize: maxPixel),
               let out = CGImageDestinationCreateWithURL(dest as CFURL, "public.jpeg" as CFString, 1, nil) else {
             return nil
         }
+        if rotateDegrees != 0 { cg = rotate(cg, degrees: rotateDegrees) }
         CGImageDestinationAddImage(out, cg, [kCGImageDestinationLossyCompressionQuality: quality] as CFDictionary)
         guard CGImageDestinationFinalize(out) else { return nil }
         return CGSize(width: cg.width, height: cg.height)

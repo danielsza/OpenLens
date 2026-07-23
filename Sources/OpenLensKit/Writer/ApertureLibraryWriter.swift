@@ -145,9 +145,43 @@ public final class ApertureLibraryWriter {
                           iptcStarRating: nil)
     }
 
-    /// Rotates a version 90° left or right relative to its current rotation.
+    /// Rotates a version 90° left or right relative to its current rotation,
+    /// and refreshes the cached thumbnail so browsing reflects it immediately.
     public func rotate(_ uuid: String, clockwise: Bool, currentRotation: Int) throws {
-        try setRotation(currentRotation + (clockwise ? 90 : -90), forVersion: uuid)
+        let newRotation = currentRotation + (clockwise ? 90 : -90)
+        try setRotation(newRotation, forVersion: uuid)
+        try? refreshThumbnail(versionUuid: uuid, rotation: ((newRotation % 360) + 360) % 360)
+    }
+
+    /// Regenerates the cached thumbnail referenced by a version's plist,
+    /// rendering the master with the given rotation baked in (matching what
+    /// Aperture did when the user rotated a photo).
+    public func refreshThumbnail(versionUuid uuid: String, rotation: Int) throws {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: true)
+        guard let plistURL = try locateVersionPlist(forVersionUuid: uuid, using: db),
+              let data = try? Data(contentsOf: plistURL),
+              let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
+              let proxy = plist["imageProxyState"] as? [String: Any] else { return }
+
+        // Master path for this version.
+        let rows = try db.query("""
+            SELECT m.imagePath AS imagePath FROM RKVersion v
+            JOIN RKMaster m ON m.uuid = v.masterUuid WHERE v.uuid = ?
+            """, [.text(uuid)])
+        guard let imagePath = rows.first?["imagePath"]?.stringValue else { return }
+        let masterURL = libraryURL.appendingPathComponent("Masters").appendingPathComponent(imagePath)
+        guard FileManager.default.fileExists(atPath: masterURL.path) else { return }
+
+        for key in ["thumbnailPath", "miniThumbnailPath"] {
+            guard let rel = proxy[key] as? String else { continue }
+            let dest = libraryURL.appendingPathComponent("Thumbnails").appendingPathComponent(rel)
+            try? FileManager.default.createDirectory(at: dest.deletingLastPathComponent(),
+                                                     withIntermediateDirectories: true)
+            let maxPixel = key == "thumbnailPath" ? 1024 : 360
+            ImageLoader.writeJPEGThumbnail(from: masterURL, to: dest,
+                                           maxPixel: maxPixel, rotateDegrees: rotation)
+        }
     }
 
     // MARK: - IPTC metadata

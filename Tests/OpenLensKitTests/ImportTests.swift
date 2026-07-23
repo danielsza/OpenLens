@@ -122,7 +122,14 @@ final class ImportTests: XCTestCase {
         try writer.rotate(v, clockwise: true, currentRotation: 0)
 
         let lib = try ApertureLibrary(url: libURL)
-        XCTAssertEqual(try lib.photos().first { $0.id == v }?.version.rotation, 90)
+        let photo = try XCTUnwrap(try lib.photos().first { $0.id == v })
+        XCTAssertEqual(photo.version.rotation, 90)
+
+        // The cached thumbnail was regenerated with the rotation baked in:
+        // the source was 20x10, so the thumb should now be taller than wide.
+        let thumb = try XCTUnwrap(lib.thumbnailURL(for: photo))
+        let size = try XCTUnwrap(ImageLoader.pixelSize(at: thumb))
+        XCTAssertGreaterThan(size.height, size.width)
     }
 
     func testImportRequiresOptIn() throws {

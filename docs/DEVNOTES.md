@@ -301,8 +301,11 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   fixedSize pickers, non-wrapping status) so nothing truncates at narrow
   widths; (3) **double-rotation fixed** — Aperture's cached thumbs/previews are
   already rotated, so version rotation is applied only when displaying the raw
-  master. Known limitation: rotating in OpenLens doesn't refresh Aperture's
-  cached thumbs (stale orientation until thumbnails are regenerated).
+  master. Rotating in OpenLens now regenerates the cached thumbnails with the
+  rotation baked in (`refreshThumbnail`), so browsing reflects it immediately.
+  Remaining edge: full-size *previews* of rotated photos aren't regenerated
+  (we can't re-render edits), so the viewer may show the old orientation for
+  the few preview-backed photos rotated in OpenLens.
 
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
