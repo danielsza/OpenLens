@@ -12,33 +12,29 @@ one-time first install (right-click ▸ Open), updates apply with no warnings.
 (A paid Apple Developer ID + notarization would remove even the first-install
 warning — later, if desired.)
 
-## One-time setup (Daniel)
+## Keys
 
-1. **Generate the signing keys** (updates are EdDSA-signed so only we can ship
-   them). After a local build:
-   ```bash
-   cd "/Users/daniel/Documents/claude aperture/OpenLens"
-   SPARKLE_BIN="$(find .build -type d -name bin -path "*parkle*" | head -1)"
-   "$SPARKLE_BIN/generate_keys"
-   ```
-   This prints a **public key** and stores the private key in your Keychain.
-   Export the private key for CI:
-   ```bash
-   "$SPARKLE_BIN/generate_keys" -x /tmp/sparkle_private_key
-   cat /tmp/sparkle_private_key   # copy this
-   ```
+The update-signing keypair was generated on 2026-07-23:
 
-2. **Save the keys**:
-   - Put the *public* key in the repo:
-     `echo "PASTE_PUBLIC_KEY" > scripts/sparkle_public_key.txt` and commit.
-   - Put the *private* key in GitHub: repo **Settings ▸ Secrets and variables ▸
-     Actions ▸ New repository secret**, name `SPARKLE_PRIVATE_KEY`, value =
-     contents of `/tmp/sparkle_private_key`. Then `rm /tmp/sparkle_private_key`.
+- **Public key** — committed at `scripts/sparkle_public_key.txt` and embedded
+  in the app as `SUPublicEDKey` at build time.
+- **Private key** — local only, at `scripts/sparkle_private_key.SECRET.txt`
+  (gitignored). It must live in GitHub as the `SPARKLE_PRIVATE_KEY` Actions
+  secret; the Release workflow signs each update zip with it (Ed25519 over the
+  archive bytes — exactly what Sparkle verifies against `SUPublicEDKey`).
 
-3. **Ship**: `git tag v0.1.0 && git push origin v0.1.0`. The Release workflow
-   tests, builds, signs the zip, and attaches `appcast.xml`. From then on,
-   every new tag (v0.1.1, v0.2.0…) is offered to users automatically.
+### Finishing setup (one manual step)
+GitHub secrets can only be added by a repo admin:
 
-Until the keys exist, everything still works — releases just publish an
-unsigned appcast (Sparkle requires the signature once a public key is embedded,
-so do steps 1–2 before tagging the first release users install).
+1. Open https://github.com/danielsza/OpenLens/settings/secrets/actions
+2. **New repository secret** → Name: `SPARKLE_PRIVATE_KEY`,
+   Value: the single line inside `scripts/sparkle_private_key.SECRET.txt`.
+3. Keep the SECRET file somewhere safe (it's your only copy — losing it means
+   shipping a new public key in an update users must install manually).
+
+## Shipping a release
+```bash
+git tag v0.1.0 && git push origin v0.1.0
+```
+The workflow tests, builds `OpenLens.app`, signs the zip, and publishes the
+Release + appcast. Users on any older version get the update in-app.

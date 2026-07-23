@@ -80,17 +80,20 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           SIG_ATTR=""
           if [ -n "${SPARKLE_PRIVATE_KEY:-}" ]; then
-            SPARKLE_BIN="$(find .build -type d -name bin -path "*Sparkle*" | head -1 || true)"
-            if [ -z "$SPARKLE_BIN" ] || [ ! -x "$SPARKLE_BIN/sign_update" ]; then
-              curl -sL -o /tmp/sparkle.tar.xz \
-                https://github.com/sparkle-project/Sparkle/releases/download/2.6.4/Sparkle-2.6.4.tar.xz
-              mkdir -p /tmp/sparkle && tar -xf /tmp/sparkle.tar.xz -C /tmp/sparkle
-              SPARKLE_BIN="/tmp/sparkle/bin"
-            fi
-            echo "$SPARKLE_PRIVATE_KEY" > /tmp/ed_key
-            # sign_update emits: sparkle:edSignature="…" length="…"
-            SIG_ATTR=" $("$SPARKLE_BIN/sign_update" "$ZIP" --ed-key-file /tmp/ed_key | tr -d '\n')"
-            rm -f /tmp/ed_key
+            # Sign the archive with Ed25519 (the secret is a base64 32-byte
+            # seed; the matching public key is scripts/sparkle_public_key.txt,
+            # embedded in the app as SUPublicEDKey).
+            python3 -m pip install --quiet pynacl \
+              || python3 -m pip install --quiet --break-system-packages pynacl
+            SIG_ATTR=" $(python3 - "$ZIP" <<'PY'
+          import base64, os, sys
+          from nacl.signing import SigningKey
+          seed = base64.b64decode(os.environ["SPARKLE_PRIVATE_KEY"].strip())
+          data = open(sys.argv[1], "rb").read()
+          sig = SigningKey(seed).sign(data).signature
+          print(f'sparkle:edSignature="{base64.b64encode(sig).decode()}" length="{len(data)}"', end="")
+          PY
+          )"
             echo "Signed update:$SIG_ATTR"
           else
             echo "SPARKLE_PRIVATE_KEY secret not set — publishing unsigned appcast."

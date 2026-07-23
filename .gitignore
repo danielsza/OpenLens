@@ -29,6 +29,7 @@ xcuserdata/
 *-shm
 
 # Never commit secrets / credentials
+*.SECRET.txt
 *.pem
 *_key
 *_key.pub
