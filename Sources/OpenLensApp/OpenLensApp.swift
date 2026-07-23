@@ -27,7 +27,13 @@ struct OpenLensApp: App {
                 .frame(minWidth: 900, minHeight: 600)
         }
         .commands {
-            CommandGroup(after: .appInfo) {
+            // Replace the About group so both items reliably render in the
+            // app menu (the `after: .appInfo` insertion doesn't show for
+            // SPM-built apps).
+            CommandGroup(replacing: .appInfo) {
+                Button("About OpenLens") {
+                    NSApplication.shared.orderFrontStandardAboutPanel(nil)
+                }
                 Button("Check for Updates…") {
                     updater.controller.checkForUpdates(nil)
                 }
@@ -54,7 +60,10 @@ struct OpenLensApp: App {
                     NotificationCenter.default.post(name: .saveSmartAlbumRequested, object: nil)
                 }
             }
-            CommandMenu("View") {
+            // Append to the system View menu (a CommandMenu("View") would
+            // create a duplicate second "View" menu).
+            CommandGroup(after: .sidebar) {
+                Divider()
                 Button("Start Slideshow") {
                     NotificationCenter.default.post(name: .slideshowRequested, object: nil)
                 }
