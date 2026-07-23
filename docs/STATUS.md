@@ -1,45 +1,37 @@
-# Where things stand (morning note)
+# Where things stand
 
-Hi Daniel — here's a quick orientation to what got built overnight and where to
-pick up.
+Quick orientation for Daniel (and future sessions). Updated 2026-07-23.
 
-## What works now
-- Open a real `.aplibrary` and browse **projects** and **user albums**.
-- **Thumbnail grid** with a **filter bar** (rating / flagged / edited).
-- **Inspector**: preview image, star rating, flag, EXIF (camera/lens/exposure),
-  copyright, keywords, and "Open in External Editor".
-- **Editing**: set rating / flag / colour label, written safely to both the
-  SQLite catalog and the per-image `.apversion` plist (toggle "Save edits" in
-  the toolbar to persist).
-- **Export**: originals or rendered JPEGs.
-- **CLI**: `swift run openlens-cli <library> --list --meta`,
-  `--export <dir> [--rendered --size N]`, `--rate <versionUuid> 0-5`.
+## What works — near-complete Aperture parity for viewing & organizing
+- **Open real `.aplibrary` catalogs in place** — validated against a real
+  676MB library; consistency checker reports zero issues on it.
+- **Browse**: Aperture-style UI (Grid / Split / Viewer + filmstrip), tabbed
+  Library/Info/Adjustments inspector, Loupe (`), face boxes (F), histogram,
+  filter bar, sort, search, smart albums, multi-select, keyboard shortcuts.
+- **Organize**: projects (nested), albums, stacks (create/break/pick/auto),
+  ratings incl. Reject, flags, colour labels, keywords, IPTC, rotate, trash
+  (move/restore/empty/permanent), move/rename/delete, duplicate version.
+- **Faces** (rectangles + names) and **Places** (map of geotagged photos).
+- **Import**: files or whole folder trees (folders → projects); thumbnails,
+  EXIF and GPS generated on import. **Duplicates** finder with review UI.
+- **Export**: JPEG/PNG/TIFF/originals, size presets + custom, DPI, quality,
+  filename suffix, text/logo watermark (Bottom Center default), metadata
+  carry-over, persisted settings.
+- **Author**: create new libraries, Slideshow, Light Table, statistics,
+  `--verify --repair`, full CLI for everything.
+- **Distribution**: CI builds a runnable OpenLens.app (with icon) on every
+  push; tagging `v*` publishes a GitHub Release automatically.
 
 ## How to run
-```bash
-cd OpenLens
-swift run OpenLensApp                       # the app
-swift run openlens-cli <library.aplibrary> --list --meta
-OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
-```
-Open the folder in Xcode to develop (it reads `Package.swift`).
+Download **OpenLens-app** from Actions artifacts (or a Release), right-click ▸
+Open. Or: `swift run OpenLensApp`. Tests: 80+ green in CI on every push.
 
-## Safety reminders
-- Editing is **off by default** in the app; turn on "Save edits" only on a copy
-  until you trust it.
-- The Kit always backs writes with `backupCatalog()` available, and tests run
-  against a throwaway copy — but back up your real library first.
+## The two remaining gaps (both need Daniel)
+1. **Adjustment editing** — decoding `RKImageAdjustment` blobs needs a small
+   library with real edits (see docs/APERTURE-TEST-CHECKLIST.md). NOTE: edited
+   photos already *display* correctly via rendered Previews.
+2. **Visual polish** — screenshots of the current build to calibrate.
 
-## Good next steps
-1. **Full-size previews + an image cache** so big libraries scroll smoothly.
-2. **Stacks** (`RKStackState` / `RKStackContent`).
-3. **Keyword editing** (add/remove), then batch metadata edits + undo.
-4. Begin **adjustments** (Phase 3): parse `RKImageAdjustment` and approximate
-   with Core Image.
-5. Promote `OpenLensApp` to a real Xcode app target (bundle/icon/entitlements)
-   so it can open libraries outside the sandbox — see `docs/building.md`.
-
-## Housekeeping
-- Rotate the GitHub PAT shared in chat (used only to create/push the repo).
-- To sync your local clone to everything pushed overnight:
-  `git fetch origin && git reset --hard origin/main`.
+## Workflow note
+GitHub PAT was rotated; the sandbox writes code locally and Daniel publishes:
+`git add -A && git commit -m "..." && git push`. CI status is readable publicly.

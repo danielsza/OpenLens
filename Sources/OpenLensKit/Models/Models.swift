@@ -37,6 +37,13 @@ public struct PhotoMaster: Identifiable, Hashable {
     public let isReference: Bool   // true => master lives outside the library
     public let isMissing: Bool
     public let fileSize: Int?
+
+    /// True when the master is a video (by catalog type or file extension).
+    public var isVideo: Bool {
+        if type == "VIDT" { return true }
+        let ext = (fileName as NSString).pathExtension.lowercased()
+        return ["mov", "mp4", "m4v", "avi", "mpg", "mpeg"].contains(ext)
+    }
 }
 
 /// A non-destructive "version" of a master. This is what the user actually

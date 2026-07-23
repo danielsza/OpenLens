@@ -28,6 +28,14 @@ struct PhotoThumbnail: View {
                     .strokeBorder(isSelected ? Theme.selection : Theme.hairline,
                                   lineWidth: isSelected ? 3 : 1)
             )
+            .overlay(alignment: .bottomLeading) {
+                if photo.master.isVideo {
+                    Image(systemName: "play.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .padding(4)
+                }
+            }
 
             if showCaption {
                 HStack(spacing: 3) {

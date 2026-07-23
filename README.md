@@ -9,23 +9,28 @@ who organised their whole catalog around its projects + non-destructive
 versions model. OpenLens is an attempt to bring that workflow back on modern
 macOS, working directly with the libraries you already have.
 
-> **Status: working app.** A full create → import → browse → organise → export
-> loop runs today, in an Aperture-style dark UI (Grid/Split/Viewer, tabbed
-> Library/Info/Adjustments inspector, filmstrip, control bar), with last-library
-> memory. Reading: projects, folders (nested), albums + smart albums, keywords,
-> stacks, EXIF/IPTC, GPS, adjustments (listed), RAW-aware thumbnails. Editing
-> (tested, opt-in, DB + `.apversion` plist kept in sync): ratings (incl.
-> Reject), flags, colour labels, keywords, trash (move/restore/empty),
-> duplicate version. Authoring: create a new library, projects, albums, and
-> import photos (with generated thumbnail + EXIF). Plus filter, search,
-> statistics, and export (originals + rendered JPEG). All on a documented,
-> reverse-engineered format ([`docs/aperture-format.md`](docs/aperture-format.md))
-> and a CI suite (60 tests) against a synthetic fixture, which also publishes a
-> runnable `OpenLens.app`.
+> **Status: near-complete parity for viewing & organizing — validated against
+> a real library.** OpenLens opens genuine `.aplibrary` catalogs in place
+> (verified on a real 676MB, 13-year library with zero inconsistencies) and
+> covers: Aperture-style UI (Grid/Split/Viewer, filmstrip, tabbed inspector,
+> Loupe, histogram), **Faces** (587/587 real detections validated) and
+> **Places** (map), rendered **Previews** (edited photos display with their
+> edits), full organizing/editing (ratings incl. Reject, flags, labels,
+> keywords, IPTC, rotate, stacks incl. auto-stack, trash incl. repair,
+> duplicate version, multi-select batch ops, smart albums, search, sort),
+> import (files or folder-trees → projects, with generated thumbnails/EXIF/
+> GPS), duplicate detection, Slideshow, Light Table, statistics, a consistency
+> checker with `--repair`, and Aperture-grade export (formats, sizes, DPI,
+> watermarks, metadata carry-over). Library authoring (new library/projects/
+> albums) works too. CI runs 80+ tests against a synthetic fixture, builds a
+> runnable `OpenLens.app` with icon on every push, and publishes GitHub
+> Releases on version tags.
 >
-> **Not yet:** rendering adjustments (the edit *parameters* still need decoding
-> from a real edited library) and full byte-for-byte Aperture authoring. Treat
-> real libraries as precious and **work on copies** until writing is
+> **Not yet:** *editing* adjustments (decoding the parameter blobs needs a
+> sample library containing real edits — see
+> [`docs/APERTURE-TEST-CHECKLIST.md`](docs/APERTURE-TEST-CHECKLIST.md));
+> edited photos already *display* correctly via Aperture's rendered previews.
+> Treat real libraries as precious and **work on copies** until writing is
 > battle-tested.
 
 ## Goals (feature parity with Aperture)

@@ -395,6 +395,8 @@ public final class ApertureLibraryWriter {
         let height = Int(size?.height ?? 0)
         let name = (dest.lastPathComponent as NSString).deletingPathExtension
         let appleDate = date.timeIntervalSinceReferenceDate
+        let videoExts: Set<String> = ["mov", "mp4", "m4v", "avi", "mpg", "mpeg"]
+        let mediaType = videoExts.contains(dest.pathExtension.lowercased()) ? "VIDT" : "IMGT"
 
         let db = try SQLiteDatabase(path: dbPath, readOnly: false)
         let masterUuid = UUID().uuidString
@@ -402,9 +404,9 @@ public final class ApertureLibraryWriter {
         try db.execute("""
             INSERT INTO RKMaster(modelId, uuid, name, projectUuid, fileName, originalFileName,
                 type, fileIsReference, isMissing, imagePath, fileSize, imageDate, createDate, isInTrash)
-            VALUES (?, ?, ?, ?, ?, ?, 'IMGT', 0, 0, ?, ?, ?, ?, 0)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, 0)
             """, [.integer(Int64(masterMid)), .text(masterUuid), .text(name), .text(projectUuid),
-                  .text(dest.lastPathComponent), .text(baseName), .text(imagePath),
+                  .text(dest.lastPathComponent), .text(baseName), .text(mediaType), .text(imagePath),
                   .integer(Int64(fileSize)), .real(appleDate), .real(appleDate)])
 
         let gps = ImageLoader.gpsCoordinate(at: dest)

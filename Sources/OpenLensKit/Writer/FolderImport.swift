@@ -11,7 +11,8 @@ public extension ApertureLibraryWriter {
 
     private static let imageExtensions: Set<String> = [
         "jpg", "jpeg", "png", "tiff", "tif", "heic", "heif", "gif", "bmp",
-        "cr2", "cr3", "nef", "arw", "dng", "orf", "raf", "rw2"
+        "cr2", "cr3", "nef", "arw", "dng", "orf", "raf", "rw2",
+        "mov", "mp4", "m4v", "avi", "mpg", "mpeg"        // videos import too
     ]
 
     /// Imports a directory tree: every folder that directly contains images

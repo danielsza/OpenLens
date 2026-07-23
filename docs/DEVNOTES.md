@@ -290,6 +290,11 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   four corners (rotated photos store swapped corners; bottom-left-origin →
   top-left). Viewer overlays face boxes + names, toggled with **F**. + tests.
 
+- **2026-07-23** Video support: `PhotoMaster.isVideo`; viewer plays VIDT
+  masters via AVKit; grid shows a play badge + AVAssetImageGenerator frame
+  thumbnails; import detects video extensions (type VIDT); folder import
+  accepts videos. Docs (CHANGELOG/README/STATUS) refreshed.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

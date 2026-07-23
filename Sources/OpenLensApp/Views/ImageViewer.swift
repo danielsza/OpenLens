@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import AVKit
 import OpenLensKit
 
 /// The large image viewer (Aperture's "Viewer"). Shows the selected photo on a
@@ -7,6 +8,7 @@ import OpenLensKit
 struct ImageViewer: View {
     @ObservedObject var store: LibraryStore
     @State private var image: NSImage?
+    @State private var player: AVPlayer?
     @State private var loupeEnabled = false
     @State private var showFaces = false
     @State private var faces: [DetectedFace] = []
@@ -19,7 +21,10 @@ struct ImageViewer: View {
         ZStack {
             Theme.viewerBackground
             if store.selectedPhoto != nil {
-                if let image {
+                if let player {
+                    VideoPlayer(player: player)
+                        .padding(16)
+                } else if let image {
                     viewerBody(image)
                 } else {
                     ProgressView()
@@ -120,7 +125,16 @@ struct ImageViewer: View {
     private func load() async {
         image = nil
         faces = []
+        player?.pause()
+        player = nil
         guard let lib = store.library, let photo = store.selectedPhoto else { return }
+        if photo.master.isVideo {
+            let url = lib.masterFileURL(for: photo.master)
+            if FileManager.default.fileExists(atPath: url.path) {
+                player = AVPlayer(url: url)
+            }
+            return
+        }
         image = await ImageCache.shared.fullImage(for: photo, in: lib)
         faces = lib.detectedFaces(for: photo)
         // Prefetch neighbours so arrow-key browsing feels instant.

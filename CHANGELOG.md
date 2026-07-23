@@ -4,6 +4,40 @@ All notable changes to OpenLens. Dates are ISO-8601.
 
 ## [Unreleased]
 
+### 2026-07-23 — Real-library validation, Faces, Places, import tools
+- **Validated against a real 676MB Aperture library** (263 masters, 2006–2019):
+  reader, plists, thumbnails, keywords all resolve; zero inconsistencies.
+- **Faces**: read detected faces + names from `Faces.db` (587/587 real
+  detections validated); viewer overlay toggled with **F**.
+- **Places**: MapKit map of geotagged photos with clickable pins (⌥⌘P).
+- **Previews**: full-size rendered previews resolved (27/27 real) and preferred
+  by the viewer — edited photos display with Aperture's edits baked in.
+- **Duplicates**: content-hash duplicate finder (CLI `--duplicates` + review UI
+  with per-copy trash).
+- **Folder-tree import**: folders → projects ("+" menu / `--import-tree`).
+- **Consistency**: `--verify` checker + `--repair` (regenerates thumbnails/
+  plists, prunes dangling rows, marks missing masters).
+- **Export**: metadata preservation (EXIF/IPTC/GPS carry-over), persisted
+  settings, custom size, filename suffix, logo watermark, Bottom Center default.
+- **App**: Loupe (`), app icon, release workflow (tag `v*` → GitHub Release),
+  viewer-source indicator, neighbour prefetch, wrench badge on edited photos.
+
+### 2026-06-19/20 — Aperture-parity push
+- Aperture-style UI (light-grey chrome + dark photo area, tabbed
+  Library/Info/Adjustments inspector, Grid/Split/Viewer, filmstrip, control
+  bar, keyboard shortcuts incl. Reject).
+- Library session behavior: auto-open last library, New/Open/Switch/Close.
+- Multi-selection with batch rate/flag/label/trash; sort; smart albums
+  (saved filters); "N of M" status.
+- Editing: keywords (chips UI), IPTC (title/caption/byline/copyright), rotate,
+  duplicate version, trash incl. guarded permanent delete.
+- Authoring: create library/projects/albums, import photos (thumbnail + EXIF +
+  GPS generated), stacks (create/break/pick/auto-stack by time), move/rename/
+  delete projects & albums.
+- Slideshow and Light Table; histogram; statistics; search; date grouping.
+- Robustness: schema-resilient readers; SQLite `immutable` reads; never ship
+  `-journal` files.
+
 ### 2026-06-17 — Phase 1 complete + Phase 2 begun
 - **Reader**: open `.aplibrary`, read projects/folders, masters, versions, and
   join them into `Photo` records.
