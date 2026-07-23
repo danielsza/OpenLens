@@ -198,8 +198,12 @@ struct InfoInspector: View {
 /// photo; editing is a future milestone.
 struct AdjustmentsInspector: View {
     @ObservedObject var store: LibraryStore
-    @State private var adjustments: [String] = []
+    @State private var apertureAdjustments: [String] = []
     @State private var histogram: ImageLoader.Histogram?
+    @State private var params = OLAdjustments()
+    @State private var savedParams = OLAdjustments()
+
+    private var isDirty: Bool { params != savedParams }
 
     var body: some View {
         if let photo = store.selectedPhoto {
@@ -213,17 +217,42 @@ struct AdjustmentsInspector: View {
 
                     Divider()
                     Text("Adjustments").font(.headline)
-                    if adjustments.isEmpty {
-                        Text("No adjustments on this photo")
-                            .font(.caption).foregroundStyle(.secondary)
-                    } else {
-                        ForEach(adjustments, id: \.self) { a in
-                            Label(a, systemImage: "slider.horizontal.3").font(.callout)
+
+                    slider("Exposure", $params.exposure, -2...2)
+                    slider("Contrast", $params.contrast, 0.5...1.5)
+                    slider("Saturation", $params.saturation, 0...2)
+                    slider("Temperature", $params.temperature, -100...100)
+                    slider("Tint", $params.tint, -100...100)
+                    slider("Highlights", $params.highlights, -1...1)
+                    slider("Shadows", $params.shadows, -1...1)
+                    slider("Sharpness", $params.sharpness, 0...1)
+
+                    HStack {
+                        Button("Reset") {
+                            params = OLAdjustments()
+                            store.previewAdjustments(params)
                         }
+                        .disabled(params.isIdentity && savedParams.isIdentity)
+                        Spacer()
+                        Button("Save") { save(photo) }
+                            .keyboardShortcut("s", modifiers: [.command])
+                            .disabled(!isDirty)
+                            .buttonStyle(.borderedProminent)
                     }
-                    Divider()
-                    Text("Adjustment editing is coming soon.")
-                        .font(.caption2).foregroundStyle(.secondary)
+                    if !store.writesEnabled && isDirty {
+                        Text("Turn on “Save edits” in the toolbar to persist.")
+                            .font(.caption2).foregroundStyle(.orange)
+                    }
+
+                    if !apertureAdjustments.isEmpty {
+                        Divider()
+                        Text("Aperture edits on this photo").font(.caption).foregroundStyle(.secondary)
+                        ForEach(apertureAdjustments, id: \.self) { a in
+                            Label(a, systemImage: "slider.horizontal.3").font(.caption)
+                        }
+                        Text("Shown via Aperture's rendered preview; re-editing them requires the adjustment decoder (planned).")
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding()
@@ -235,9 +264,33 @@ struct AdjustmentsInspector: View {
         }
     }
 
+    private func slider(_ label: String, _ value: Binding<Double>,
+                        _ range: ClosedRange<Double>) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Text(label).font(.caption)
+                Spacer()
+                Text(String(format: "%.2f", value.wrappedValue))
+                    .font(.caption2).monospacedDigit().foregroundStyle(.secondary)
+            }
+            Slider(value: Binding(
+                get: { value.wrappedValue },
+                set: { value.wrappedValue = $0; store.previewAdjustments(params) }
+            ), in: range)
+        }
+    }
+
+    private func save(_ photo: Photo) {
+        store.saveAdjustments(params, for: photo)
+        savedParams = params
+    }
+
     private func load(_ photo: Photo) async {
-        guard let lib = store.library else { adjustments = []; histogram = nil; return }
-        adjustments = (try? lib.enabledAdjustmentNames(for: photo)) ?? []
+        guard let lib = store.library else { apertureAdjustments = []; histogram = nil; return }
+        let all = (try? lib.enabledAdjustmentNames(for: photo)) ?? []
+        apertureAdjustments = all.filter { $0 != "OLAdjustmentsV1" }
+        savedParams = lib.olAdjustments(for: photo) ?? OLAdjustments()
+        params = savedParams
         histogram = nil
         let url = lib.displayImageURL(for: photo)
         histogram = await Task.detached(priority: .utility) {

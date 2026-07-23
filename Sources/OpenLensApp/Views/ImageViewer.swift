@@ -34,7 +34,7 @@ struct ImageViewer: View {
                     .foregroundStyle(Theme.captionOnDark)
             }
         }
-        .task(id: store.selectedPhotoID) { await load() }
+        .task(id: "\(store.selectedPhotoID ?? "none")#\(store.adjustmentsRevision)") { await load() }
         .background(loupeShortcut)
     }
 
@@ -135,7 +135,8 @@ struct ImageViewer: View {
             }
             return
         }
-        image = await ImageCache.shared.fullImage(for: photo, in: lib)
+        image = await ImageCache.shared.fullImage(for: photo, in: lib,
+                                                  adjustments: store.liveAdjustments)
         faces = lib.detectedFaces(for: photo)
         // Prefetch neighbours so arrow-key browsing feels instant.
         let photos = store.visiblePhotos

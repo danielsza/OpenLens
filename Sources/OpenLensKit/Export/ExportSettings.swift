@@ -103,7 +103,10 @@ public extension Exporter {
         } else {
             base = ImageLoader.cgImage(at: src, maxPixelSize: settings.maxPixelSize)
         }
-        guard let cg = base else { throw ExportError.decodeFailed(photo.version.name) }
+        guard var cg = base else { throw ExportError.decodeFailed(photo.version.name) }
+        if let params = library.olAdjustments(for: photo) {
+            cg = AdjustmentRenderer.apply(params, to: cg)
+        }
         let rendered = Exporter.applyWatermark(cg, settings.watermark)
         let dest = uniqueURL(in: directory, base: photo.version.name + settings.fileNameSuffix,
                              ext: settings.fileExtension)

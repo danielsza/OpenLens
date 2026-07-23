@@ -136,6 +136,7 @@ final class LibraryStore: ObservableObject {
     private func clearSelection() {
         selectedPhotoID = nil
         selectedPhotoIDs = []
+        liveAdjustments = nil
     }
 
     private func clearSmartAlbumSelection() { selectedSmartAlbumID = nil }
@@ -150,6 +151,7 @@ final class LibraryStore: ObservableObject {
 
     /// Handles a thumbnail click with optional Command (toggle) / Shift (range).
     func handleTap(_ photo: Photo, command: Bool, shift: Bool) {
+        if photo.id != selectedPhotoID { liveAdjustments = nil }
         if command {
             if selectedPhotoIDs.contains(photo.id) { selectedPhotoIDs.remove(photo.id) }
             else { selectedPhotoIDs.insert(photo.id) }
@@ -183,6 +185,34 @@ final class LibraryStore: ObservableObject {
     func setColorLabelForSelection(_ label: Int) {
         selectionPhotos().forEach { setColorLabel(label, for: $0) }
     }
+    // MARK: - Live adjustments (OpenLens-native)
+
+    /// Unsaved slider values being previewed in the viewer (nil = none).
+    @Published var liveAdjustments: OLAdjustments?
+    /// Bumped on every live change so the viewer re-renders.
+    @Published var adjustmentsRevision = 0
+
+    func previewAdjustments(_ params: OLAdjustments) {
+        liveAdjustments = params
+        adjustmentsRevision += 1
+    }
+
+    func saveAdjustments(_ params: OLAdjustments, for photo: Photo) {
+        guard let w = makeWriter() else { return }
+        do {
+            try w.setOLAdjustments(params, forVersion: photo.version.id)
+            liveAdjustments = nil
+            reload()
+            selectedPhotoID = photo.id
+            selectedPhotoIDs = [photo.id]
+        } catch { errorMessage = "Couldn't save adjustments: \(error)" }
+    }
+
+    func discardLiveAdjustments() {
+        liveAdjustments = nil
+        adjustmentsRevision += 1
+    }
+
     /// Auto-stacks the visible photos by capture-time proximity.
     func autoStack(gapSeconds: TimeInterval = 8) {
         guard let w = makeWriter() else { return }
@@ -367,6 +397,7 @@ final class LibraryStore: ObservableObject {
         guard !photos.isEmpty else { return }
         let idx = photos.firstIndex { $0.id == selectedPhotoID } ?? 0
         let next = max(0, min(photos.count - 1, idx + delta))
+        if photos[next].id != selectedPhotoID { liveAdjustments = nil }
         selectedPhotoID = photos[next].id
         selectedPhotoIDs = [photos[next].id]
     }

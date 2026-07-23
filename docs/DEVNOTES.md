@@ -362,6 +362,17 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   setup in docs/updates.md. Updates install without Gatekeeper nags (only the
   first browser-downloaded install needs right-click ▸ Open).
 
+- **2026-07-23** **ADJUSTMENT EDITING SHIPPED (OpenLens-native)**: realized we
+  don't need Aperture's blob format for *new* edits — defined `OLAdjustments`
+  (exposure/contrast/saturation/temp/tint/highlights/shadows/sharpness), stored
+  as JSON in an `RKImageAdjustment` row named `OLAdjustmentsV1`; rendered with
+  Core Image (`AdjustmentRenderer`); live-preview sliders in the Adjustments
+  tab with Save/Reset; viewer + export + regenerated thumbnails all apply the
+  look; hasAdjustments synced DB+plist. Aperture's own edits still display via
+  previews and are listed read-only. Decoding Aperture's blobs (for re-editing
+  old edits) remains blocked on an edited sample library. + tests (render
+  brightness delta, save/load/clear round-trip).
+
 ### Current state (as of 2026-07-23)
 - ~95 tests, green in CI; near-complete Aperture parity for viewing/organizing,
   validated against a real 676MB library (babcia). Daniel is actively testing

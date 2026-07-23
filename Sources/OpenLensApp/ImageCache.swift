@@ -59,16 +59,20 @@ final class ImageCache {
     }
 
     /// Full-resolution decode for the viewer (cached at a high-size key).
-    func fullImage(for photo: Photo, in library: ApertureLibrary) async -> NSImage? {
+    func fullImage(for photo: Photo, in library: ApertureLibrary,
+                   adjustments: OLAdjustments? = nil) async -> NSImage? {
         let rotation = photo.version.rotation
-        let k = key("\(photo.id)#\(rotation)", 0)
+        // Live override wins; else any saved OpenLens adjustments.
+        let params = adjustments ?? library.olAdjustments(for: photo)
+        let k = key("\(photo.id)#\(rotation)#\(params?.cacheKey ?? "-")", 0)
         if let hit = cache.object(forKey: k) { return hit }
         // Prefer Aperture's rendered preview (reflects its edits) over the master.
         let url = library.viewerImageURL(for: photo)
         // Previews/thumbnails are already rotated by Aperture; only rotate masters.
         let applyRotation = (url == library.masterFileURL(for: photo.master)) ? rotation : 0
         let cg = await Task.detached(priority: .userInitiated) { () -> CGImage? in
-            guard let base = ImageLoader.cgImage(at: url, maxPixelSize: 2400) else { return nil }
+            guard var base = ImageLoader.cgImage(at: url, maxPixelSize: 2400) else { return nil }
+            if let params { base = AdjustmentRenderer.apply(params, to: base) }
             return ImageLoader.rotate(base, degrees: applyRotation)
         }.value
         guard let cg else { return nil }

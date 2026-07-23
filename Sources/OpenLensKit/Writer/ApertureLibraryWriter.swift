@@ -1,4 +1,6 @@
 import Foundation
+import CoreGraphics
+import ImageIO
 
 /// Performs the small set of *safe* mutations OpenLens supports today:
 /// ratings, flags, and colour labels.
@@ -134,6 +136,70 @@ public final class ApertureLibraryWriter {
         return fixed
     }
 
+    // MARK: - OpenLens adjustments (non-destructive)
+
+    /// Saves OpenLens-native adjustments for a version (upserts the
+    /// `OLAdjustmentsV1` row), updates `hasAdjustments`, and regenerates the
+    /// cached thumbnail with the look applied. Passing identity parameters
+    /// clears the adjustments instead.
+    public func setOLAdjustments(_ params: OLAdjustments, forVersion uuid: String) throws {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        if params.isIdentity {
+            try clearOLAdjustments(forVersion: uuid)
+            return
+        }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+        let data = try params.encodedJSON()
+        let existing = try db.query(
+            "SELECT modelId FROM RKImageAdjustment WHERE versionUuid = ? AND name = ?",
+            [.text(uuid), .text(ApertureLibrary.olAdjustmentName)])
+        if let mid = existing.first?["modelId"]?.intValue {
+            try db.execute("UPDATE RKImageAdjustment SET data = ?, isEnabled = 1 WHERE modelId = ?",
+                           [.blob(data), .integer(Int64(mid))])
+        } else {
+            let mid = try nextModelId("RKImageAdjustment", db)
+            let idx = (try db.query(
+                "SELECT COALESCE(MAX(adjIndex), -1) + 1 AS n FROM RKImageAdjustment WHERE versionUuid = ?",
+                [.text(uuid)]).first?["n"]?.intValue) ?? 0
+            try db.execute("""
+                INSERT INTO RKImageAdjustment(modelId, uuid, name, versionUuid, maskUuid,
+                    adjIndex, isEnabled, data, dbVersion)
+                VALUES (?, ?, ?, ?, NULL, ?, 1, ?, 1)
+                """, [.integer(Int64(mid)), .text(UUID().uuidString),
+                      .text(ApertureLibrary.olAdjustmentName), .text(uuid),
+                      .integer(Int64(idx)), .blob(data)])
+        }
+        try updateVersion(uuid: uuid,
+                          columns: ["hasAdjustments": .integer(1)],
+                          plistKeys: ["hasAdjustments": true, "hasEnabledAdjustments": true],
+                          iptcStarRating: nil)
+        try? refreshThumbnail(versionUuid: uuid, rotation: currentRotation(uuid, db),
+                              adjustments: params)
+    }
+
+    /// Removes OpenLens-native adjustments from a version.
+    public func clearOLAdjustments(forVersion uuid: String) throws {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+        try db.execute("DELETE FROM RKImageAdjustment WHERE versionUuid = ? AND name = ?",
+                       [.text(uuid), .text(ApertureLibrary.olAdjustmentName)])
+        let remaining = try db.query(
+            "SELECT 1 FROM RKImageAdjustment WHERE versionUuid = ? AND isEnabled = 1",
+            [.text(uuid)])
+        let has = remaining.isEmpty ? 0 : 1
+        try updateVersion(uuid: uuid,
+                          columns: ["hasAdjustments": .integer(Int64(has))],
+                          plistKeys: ["hasAdjustments": has == 1, "hasEnabledAdjustments": has == 1],
+                          iptcStarRating: nil)
+        try? refreshThumbnail(versionUuid: uuid, rotation: currentRotation(uuid, db),
+                              adjustments: nil)
+    }
+
+    private func currentRotation(_ uuid: String, _ db: SQLiteDatabase) -> Int {
+        (try? db.query("SELECT rotation FROM RKVersion WHERE uuid = ?", [.text(uuid)])
+            .first?["rotation"]?.intValue) ?? 0
+    }
+
     // MARK: - Rotation
 
     /// Sets absolute rotation (degrees clockwise) on a version.
@@ -150,13 +216,23 @@ public final class ApertureLibraryWriter {
     public func rotate(_ uuid: String, clockwise: Bool, currentRotation: Int) throws {
         let newRotation = currentRotation + (clockwise ? 90 : -90)
         try setRotation(newRotation, forVersion: uuid)
-        try? refreshThumbnail(versionUuid: uuid, rotation: ((newRotation % 360) + 360) % 360)
+        // Preserve any OpenLens adjustments in the regenerated thumbnail.
+        let db = try SQLiteDatabase(path: dbPath, readOnly: true)
+        let adjData = try? db.query(
+            "SELECT data FROM RKImageAdjustment WHERE versionUuid = ? AND name = ? AND isEnabled = 1",
+            [.text(uuid), .text(ApertureLibrary.olAdjustmentName)])
+            .first?["data"]?.dataValue
+        let adjustments = (adjData ?? nil).flatMap { OLAdjustments.decode($0) }
+        try? refreshThumbnail(versionUuid: uuid, rotation: ((newRotation % 360) + 360) % 360,
+                              adjustments: adjustments)
     }
 
     /// Regenerates the cached thumbnail referenced by a version's plist,
-    /// rendering the master with the given rotation baked in (matching what
-    /// Aperture did when the user rotated a photo).
-    public func refreshThumbnail(versionUuid uuid: String, rotation: Int) throws {
+    /// rendering the master with the given rotation (and, when provided,
+    /// OpenLens adjustments) baked in — matching what Aperture did when the
+    /// user edited a photo.
+    public func refreshThumbnail(versionUuid uuid: String, rotation: Int,
+                                 adjustments: OLAdjustments? = nil) throws {
         guard allowWrites else { throw WriteError.writesNotAllowed }
         let db = try SQLiteDatabase(path: dbPath, readOnly: true)
         guard let plistURL = try locateVersionPlist(forVersionUuid: uuid, using: db),
@@ -179,8 +255,13 @@ public final class ApertureLibraryWriter {
             try? FileManager.default.createDirectory(at: dest.deletingLastPathComponent(),
                                                      withIntermediateDirectories: true)
             let maxPixel = key == "thumbnailPath" ? 1024 : 360
-            ImageLoader.writeJPEGThumbnail(from: masterURL, to: dest,
-                                           maxPixel: maxPixel, rotateDegrees: rotation)
+            guard var cg = ImageLoader.cgImage(at: masterURL, maxPixelSize: maxPixel) else { continue }
+            if let adjustments { cg = AdjustmentRenderer.apply(adjustments, to: cg) }
+            if rotation != 0 { cg = ImageLoader.rotate(cg, degrees: rotation) }
+            if let out = CGImageDestinationCreateWithURL(dest as CFURL, "public.jpeg" as CFString, 1, nil) {
+                CGImageDestinationAddImage(out, cg, [kCGImageDestinationLossyCompressionQuality: 0.85] as CFDictionary)
+                CGImageDestinationFinalize(out)
+            }
         }
     }
 
