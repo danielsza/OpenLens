@@ -605,6 +605,7 @@ public final class ApertureLibraryWriter {
                 [.integer(Int64(mid)), .integer(Int64(versionId)), .integer(Int64(keywordId))])
         }
         try db.execute("UPDATE RKVersion SET hasKeywords = 1 WHERE uuid = ?", [.text(uuid)])
+        try? syncKeywordsToPlist(versionUuid: uuid, db)
     }
 
     /// Removes a keyword (by name) from a version. No-op if not assigned.
@@ -624,6 +625,52 @@ public final class ApertureLibraryWriter {
             [.integer(Int64(versionId))])
         try db.execute("UPDATE RKVersion SET hasKeywords = ? WHERE uuid = ?",
                        [.integer(remaining.isEmpty ? 0 : 1), .text(uuid)])
+        try? syncKeywordsToPlist(versionUuid: uuid, db)
+    }
+
+    /// Mirrors a version's current keywords into its `.apversion` plist, in
+    /// Aperture's observed format: top-level `keywords` = array of
+    /// tab-joined leaf→ancestor paths; `iptcProperties.Keywords` = flat
+    /// comma-joined names.
+    private func syncKeywordsToPlist(versionUuid uuid: String, _ db: SQLiteDatabase) throws {
+        // All keywords (for parent-chain lookup) and this version's set.
+        var byId: [Int: (name: String, parent: Int?)] = [:]
+        for row in try db.query("SELECT modelId, name, parentId FROM RKKeyword") {
+            if let id = row["modelId"]?.intValue, let name = row["name"]?.stringValue {
+                byId[id] = (name, row["parentId"]?.intValue)
+            }
+        }
+        let rows = try db.query("""
+            SELECT kv.keywordId AS kid FROM RKKeywordForVersion kv
+            JOIN RKVersion v ON v.modelId = kv.versionId WHERE v.uuid = ?
+            """, [.text(uuid)])
+        var paths: [String] = []
+        var flat: [String] = []
+        for row in rows {
+            guard let kid = row["kid"]?.intValue, let leaf = byId[kid] else { continue }
+            flat.append(leaf.name)
+            var chain = [leaf.name]
+            var parent = leaf.parent
+            while let p = parent, let entry = byId[p] {
+                chain.append(entry.name)
+                parent = entry.parent
+            }
+            paths.append(chain.joined(separator: "\t"))
+        }
+        flat.sort(); paths.sort()
+
+        guard let plistURL = try locateVersionPlist(forVersionUuid: uuid, using: db) else { return }
+        var format = PropertyListSerialization.PropertyListFormat.binary
+        let data = try Data(contentsOf: plistURL)
+        guard var plist = try PropertyListSerialization.propertyList(
+            from: data, options: [], format: &format) as? [String: Any] else { return }
+        plist["keywords"] = paths
+        var iptc = plist["iptcProperties"] as? [String: Any] ?? [:]
+        iptc["Keywords"] = flat.joined(separator: ", ")
+        plist["iptcProperties"] = iptc
+        plist["plistWriteTimestamp"] = Date()
+        let out = try PropertyListSerialization.data(fromPropertyList: plist, format: format, options: 0)
+        try out.write(to: plistURL, options: .atomic)
     }
 
     /// Replaces a version's keywords with exactly `names`.

@@ -307,6 +307,12 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   (we can't re-render edits), so the viewer may show the old orientation for
   the few preview-backed photos rotated in OpenLens.
 
+- **2026-07-23** Keyword plist mirroring: decoded Aperture's real format from
+  babcia (top-level `keywords` = tab-joined leaf→ancestor paths;
+  `iptcProperties.Keywords` = comma-joined flat list) and keyword writes now
+  sync DB + plist + IPTC. Notes table turned out to be focus-point blobs only —
+  no user-notes feature needed. + test.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

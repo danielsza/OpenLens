@@ -48,6 +48,28 @@ final class KeywordWriteTests: XCTestCase {
         XCTAssertFalse(try after.keywords(for: updated).contains("Temp"))
     }
 
+    func testKeywordsMirroredIntoPlist() throws {
+        let lib = try copyOfTestLibrary()
+        defer { try? FileManager.default.removeItem(at: lib) }
+        let reader = try ApertureLibrary(url: lib)
+        let photo = try XCTUnwrap(try reader.photos().first)
+        let writer = ApertureLibraryWriter(libraryURL: lib, allowWrites: true)
+
+        try writer.addKeyword("Sunset", toVersion: photo.version.id)
+        try writer.addKeyword("Alps", toVersion: photo.version.id)
+
+        let after = try ApertureLibrary(url: lib)
+        let updated = try XCTUnwrap(after.photos().first { $0.id == photo.id })
+        let plistURL = try XCTUnwrap(after.versionPlistURL(for: updated))
+        let dict = try XCTUnwrap(ApertureLibrary.readPlist(plistURL))
+        let paths = try XCTUnwrap(dict["keywords"] as? [String])
+        XCTAssertTrue(paths.contains("Sunset"))
+        XCTAssertTrue(paths.contains("Alps"))
+        let iptc = dict["iptcProperties"] as? [String: Any]
+        let flat = try XCTUnwrap(iptc?["Keywords"] as? String)
+        XCTAssertTrue(flat.contains("Sunset") && flat.contains("Alps"))
+    }
+
     func testSetKeywordsReplaces() throws {
         let lib = try copyOfTestLibrary()
         defer { try? FileManager.default.removeItem(at: lib) }
