@@ -29,6 +29,7 @@ guard let libPath = args.first else {
       openlens-cli <library.aplibrary> --duplicate <versionUuid>
       openlens-cli <library.aplibrary> --verify [--repair]
       openlens-cli <library.aplibrary> --duplicates
+      openlens-cli <library.aplibrary> --import-tree <folder>
     """)
 }
 
@@ -79,6 +80,14 @@ do {
         let writer = ApertureLibraryWriter(libraryURL: libURL, allowWrites: true)
         let newUuid = try writer.duplicateVersion(args[i + 1])
         print("Duplicated \(args[i + 1]) -> \(newUuid)")
+        exit(0)
+    }
+
+    if args.contains("--import-tree"), let i = args.firstIndex(of: "--import-tree") {
+        guard i + 1 < args.count else { fail("--import-tree requires a folder path") }
+        let writer = ApertureLibraryWriter(libraryURL: libURL, allowWrites: true)
+        let result = try writer.importFolderTree(at: URL(fileURLWithPath: args[i + 1])) { print("  \($0)") }
+        print("Created \(result.projectsCreated) project(s), imported \(result.photosImported) photo(s), skipped \(result.skipped).")
         exit(0)
     }
 

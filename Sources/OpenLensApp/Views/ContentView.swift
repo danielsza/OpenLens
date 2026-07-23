@@ -10,6 +10,7 @@ struct ContentView: View {
     @State private var showSlideshow = false
     @State private var showLightTable = false
     @State private var showPlaces = false
+    @State private var showDuplicates = false
 
     var body: some View {
         mainView
@@ -68,6 +69,9 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .placesRequested)) { _ in
                 if store.library != nil { showPlaces = true }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .duplicatesRequested)) { _ in
+                if store.library != nil { showDuplicates = true }
+            }
             .alert("Library error",
                    isPresented: Binding(get: { store.errorMessage != nil },
                                         set: { if !$0 { store.errorMessage = nil } })) {
@@ -95,6 +99,7 @@ struct ContentView: View {
             .sheet(isPresented: $showSlideshow) { SlideshowView(store: store, isPresented: $showSlideshow) }
             .sheet(isPresented: $showLightTable) { LightTableView(store: store, isPresented: $showLightTable) }
             .sheet(isPresented: $showPlaces) { PlacesMapView(store: store, isPresented: $showPlaces) }
+            .sheet(isPresented: $showDuplicates) { DuplicatesView(store: store, isPresented: $showDuplicates) }
     }
 
     // MARK: - Center column
@@ -218,6 +223,7 @@ struct ContentView: View {
                 Divider()
                 Button("Import Photos…") { importPhotos() }
                     .disabled(store.projects.isEmpty)
+                Button("Import Folder as Projects…") { importFolderTree() }
             } label: {
                 Label("New", systemImage: "plus")
             }
@@ -314,6 +320,25 @@ struct ContentView: View {
         store.reload()
         store.selectProject(projectUuid)
         if failed > 0 { store.errorMessage = "\(failed) file(s) couldn't be imported." }
+    }
+
+    private func importFolderTree() {
+        guard let lib = store.library else { return }
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.message = "Choose a folder — each subfolder with images becomes a project"
+        guard panel.runModal() == .OK, let root = panel.url else { return }
+        let writer = ApertureLibraryWriter(libraryURL: lib.url, allowWrites: true)
+        do {
+            let result = try writer.importFolderTree(at: root)
+            store.reload()
+            if result.photosImported == 0 {
+                store.errorMessage = "No images found in \(root.lastPathComponent)."
+            }
+        } catch {
+            store.errorMessage = "Folder import failed: \(error)"
+        }
     }
 
     private func promptForName(title: String, placeholder: String) -> String? {

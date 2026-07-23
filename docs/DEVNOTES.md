@@ -279,6 +279,17 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   libraries) + CLI `--duplicates` + test. **Places map** (MapKit) of geotagged
   photos with clickable pins — View ▸ Places (⌥⌘P).
 
+- **2026-07-23** Folder-tree import: `importFolderTree(at:)` — every folder with
+  images becomes a project; recursive; skips dotfolders/.aplibrary; "+" menu ▸
+  Import Folder as Projects… and CLI `--import-tree`. + test.
+- **2026-07-23** Duplicates UI: View ▸ Find Duplicates — thumbnail groups with
+  per-copy "Trash this copy" buttons; rescans after each trash.
+
+- **2026-07-23** **Faces**: read `Faces.db` (`RKDetectedFace` + `RKFaceName`) —
+  595 real detections validated 587/587 after normalizing via min/max of all
+  four corners (rotated photos store swapped corners; bottom-left-origin →
+  top-left). Viewer overlays face boxes + names, toggled with **F**. + tests.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.

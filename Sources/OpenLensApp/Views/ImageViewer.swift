@@ -8,6 +8,8 @@ struct ImageViewer: View {
     @ObservedObject var store: LibraryStore
     @State private var image: NSImage?
     @State private var loupeEnabled = false
+    @State private var showFaces = false
+    @State private var faces: [DetectedFace] = []
     @State private var hover: CGPoint?
 
     private let loupeDiameter: CGFloat = 180
@@ -32,10 +34,14 @@ struct ImageViewer: View {
     }
 
     private var loupeShortcut: some View {
-        Button("") { loupeEnabled.toggle() }
-            .keyboardShortcut("`", modifiers: [])
-            .opacity(0)
-            .frame(width: 0, height: 0)
+        Group {
+            Button("") { loupeEnabled.toggle() }
+                .keyboardShortcut("`", modifiers: [])
+            Button("") { showFaces.toggle() }
+                .keyboardShortcut("f", modifiers: [])
+        }
+        .opacity(0)
+        .frame(width: 0, height: 0)
     }
 
     @ViewBuilder
@@ -53,6 +59,27 @@ struct ImageViewer: View {
                         case .ended: hover = nil
                         }
                     }
+
+                if showFaces {
+                    ForEach(faces) { face in
+                        let r = CGRect(x: fitted.minX + face.rect.minX * fitted.width,
+                                       y: fitted.minY + face.rect.minY * fitted.height,
+                                       width: face.rect.width * fitted.width,
+                                       height: face.rect.height * fitted.height)
+                        ZStack(alignment: .bottom) {
+                            Rectangle().strokeBorder(.yellow.opacity(0.9), lineWidth: 2)
+                            if let name = face.name {
+                                Text(name).font(.caption2).padding(.horizontal, 4)
+                                    .background(.yellow.opacity(0.85), in: Capsule())
+                                    .foregroundStyle(.black)
+                                    .offset(y: 14)
+                            }
+                        }
+                        .frame(width: r.width, height: r.height)
+                        .position(x: r.midX, y: r.midY)
+                        .allowsHitTesting(false)
+                    }
+                }
 
                 if loupeEnabled, let p = hover, fitted.contains(p) {
                     loupe(image, fitted: fitted, at: p)
@@ -92,8 +119,10 @@ struct ImageViewer: View {
 
     private func load() async {
         image = nil
+        faces = []
         guard let lib = store.library, let photo = store.selectedPhoto else { return }
         image = await ImageCache.shared.fullImage(for: photo, in: lib)
+        faces = lib.detectedFaces(for: photo)
         // Prefetch neighbours so arrow-key browsing feels instant.
         let photos = store.visiblePhotos
         if let idx = photos.firstIndex(where: { $0.id == photo.id }) {
