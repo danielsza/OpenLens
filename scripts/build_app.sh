@@ -40,6 +40,10 @@ fi
 # Sparkle public key for verifying updates (commit yours to scripts/sparkle_public_key.txt).
 SU_PUBLIC_KEY=""
 [ -f scripts/sparkle_public_key.txt ] && SU_PUBLIC_KEY="$(tr -d '[:space:]' < scripts/sparkle_public_key.txt)"
+
+# Version = latest tag (falls back for tag-less checkouts).
+VERSION="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')"
+[ -z "$VERSION" ] && VERSION="0.0.0"
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -50,8 +54,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleIdentifier</key><string>com.openlens.app</string>
   <key>CFBundleExecutable</key><string>OpenLens</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>0.1.0</string>
-  <key>CFBundleVersion</key><string>0.1.0</string>
+  <key>CFBundleShortVersionString</key><string>${VERSION}</string>
+  <key>CFBundleVersion</key><string>${VERSION}</string>
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSPrincipalClass</key><string>NSApplication</string>
