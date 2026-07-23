@@ -11,6 +11,8 @@ public struct LibraryStatistics: Equatable {
     public var stackCount = 0
     public var flaggedCount = 0
     public var editedCount = 0
+    /// Photos with a full-size rendered preview on disk.
+    public var previewCount = 0
     /// rating (0...5) -> number of photos.
     public var ratingHistogram: [Int: Int] = [:]
 }
@@ -31,6 +33,7 @@ public extension ApertureLibrary {
         s.stackCount = (try? stacks().count) ?? 0
         s.flaggedCount = photos.filter { $0.version.isFlagged }.count
         s.editedCount = photos.filter { $0.version.hasAdjustments }.count
+        s.previewCount = photos.filter { previewURL(for: $0) != nil }.count
 
         var hist: [Int: Int] = [:]
         for photo in photos {

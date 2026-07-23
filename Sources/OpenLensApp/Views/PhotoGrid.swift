@@ -39,6 +39,9 @@ struct PhotoThumbnail: View {
                     if photo.version.isFlagged {
                         Image(systemName: "flag.fill").font(.system(size: 7)).foregroundStyle(.orange)
                     }
+                    if photo.version.hasAdjustments {
+                        Image(systemName: "wrench.fill").font(.system(size: 7)).foregroundStyle(Theme.captionOnDarkDim)
+                    }
                     if let c = ColorLabelStyle.color(photo.version.colorLabel) {
                         Circle().fill(c).frame(width: 6, height: 6)
                     }

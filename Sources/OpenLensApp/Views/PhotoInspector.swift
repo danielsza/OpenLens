@@ -97,6 +97,9 @@ struct InfoInspector: View {
                 row("Dimensions", "\(w) × \(h)")
             }
             row("Type", photo.master.type)
+            if let lib = store.library {
+                row("Viewer shows", lib.previewURL(for: photo) != nil ? "Rendered preview (with edits)" : "Original master")
+            }
             if let lat = photo.version.latitude, let lon = photo.version.longitude {
                 row("Location", String(format: "%.4f, %.4f", lat, lon))
             }

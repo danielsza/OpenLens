@@ -164,7 +164,7 @@ do {
 
     if let s = try? library.statistics() {
         let hist = (0...5).map { "\($0)★:\(s.ratingHistogram[$0] ?? 0)" }.joined(separator: " ")
-        print("\nStats: \(s.photoCount) photos, \(s.flaggedCount) flagged, \(s.editedCount) edited")
+        print("\nStats: \(s.photoCount) photos, \(s.flaggedCount) flagged, \(s.editedCount) edited, \(s.previewCount) with previews")
         print("Ratings: \(hist)")
     }
 

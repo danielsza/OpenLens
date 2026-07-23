@@ -266,6 +266,14 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   output, so edited photos display with their edits applied even before we can
   decode adjustments.** + test.
 
+- **2026-07-23** Inspector shows what the viewer displays (preview vs master);
+  statistics/CLI count previews; grid shows a wrench badge on edited photos.
+
+- **2026-07-23** App icon (programmatically drawn aperture blades →
+  .icns in CI bundle) and a **Release workflow**: pushing a tag `v*` runs
+  tests, builds OpenLens.app, and publishes a GitHub Release with the zip +
+  CLI attached. To cut v0.1.0: `git tag v0.1.0 && git push origin v0.1.0`.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.
