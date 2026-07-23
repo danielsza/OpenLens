@@ -381,6 +381,15 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   shadow + hairline frame bookend; filmstrip gets edge fades + top hairline.
   Edit state centralized in the store (`editParams`/`savedEditParams`).
 
+- **2026-07-23** Missing-features push: **Compare view** (two-up, synced
+  zoom/pan, ⌥⌘C), **Loupe zoom levels** 50%–1600% (= / - keys, % badge),
+  **Print** (⌘P, aspect-fit, auto orientation). **Version convention (per
+  Daniel, pitcrew-style): ALWAYS BUMP** — dev builds stamp `tag.commitsSince`
+  (e.g. 0.1.2.5) and every feature batch gets a new release tag (Claude tags
+  via API). Scoped out (do NOT build): books, web galleries, FTP publishing.
+  Deferred pending real hardware/data: tethering, Raw Fine Tuning (CIRAWFilter),
+  referenced-master alias resolution (needs a referenced sample library).
+
 ### Current state (as of 2026-07-23)
 - ~95 tests, green in CI; near-complete Aperture parity for viewing/organizing,
   validated against a real 676MB library (babcia). Daniel is actively testing

@@ -41,9 +41,18 @@ fi
 SU_PUBLIC_KEY=""
 [ -f scripts/sparkle_public_key.txt ] && SU_PUBLIC_KEY="$(tr -d '[:space:]' < scripts/sparkle_public_key.txt)"
 
-# Version = latest tag (falls back for tag-less checkouts).
-VERSION="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')"
-[ -z "$VERSION" ] && VERSION="0.0.0"
+# Always-bumping version: exactly on a tag -> "0.1.2"; N commits past the tag
+# -> "0.1.2.N" (so every build shows a higher version than the last release).
+DESC="$(git describe --tags 2>/dev/null | sed 's/^v//')"
+if [ -z "$DESC" ]; then
+  VERSION="0.0.0"
+elif echo "$DESC" | grep -q -- '-'; then
+  BASE="${DESC%%-*}"
+  COMMITS="$(echo "$DESC" | cut -d- -f2)"
+  VERSION="${BASE}.${COMMITS}"
+else
+  VERSION="$DESC"
+fi
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

@@ -79,6 +79,16 @@ struct OpenLensApp: App {
                 Button("Find Duplicates") {
                     NotificationCenter.default.post(name: .duplicatesRequested, object: nil)
                 }
+                Button("Compare Selected") {
+                    NotificationCenter.default.post(name: .compareRequested, object: nil)
+                }
+                .keyboardShortcut("c", modifiers: [.command, .option])
+            }
+            CommandGroup(replacing: .printItem) {
+                Button("Print…") {
+                    NotificationCenter.default.post(name: .printRequested, object: nil)
+                }
+                .keyboardShortcut("p", modifiers: [.command])
             }
             CommandMenu("Photo") {
                 Button("Duplicate Version") {
@@ -129,6 +139,8 @@ extension Notification.Name {
     static let lightTableRequested = Notification.Name("lightTableRequested")
     static let placesRequested = Notification.Name("placesRequested")
     static let duplicatesRequested = Notification.Name("duplicatesRequested")
+    static let compareRequested = Notification.Name("compareRequested")
+    static let printRequested = Notification.Name("printRequested")
     static let openLibraryRequested = Notification.Name("openLibraryRequested")
     static let closeLibraryRequested = Notification.Name("closeLibraryRequested")
 }

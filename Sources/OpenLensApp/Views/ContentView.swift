@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var showLightTable = false
     @State private var showPlaces = false
     @State private var showDuplicates = false
+    @State private var showCompare = false
 
     var body: some View {
         mainView
@@ -72,6 +73,12 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .duplicatesRequested)) { _ in
                 if store.library != nil { showDuplicates = true }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .compareRequested)) { _ in
+                if store.library != nil { showCompare = true }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .printRequested)) { _ in
+                printSelected()
+            }
             .alert("Library error",
                    isPresented: Binding(get: { store.errorMessage != nil },
                                         set: { if !$0 { store.errorMessage = nil } })) {
@@ -100,6 +107,27 @@ struct ContentView: View {
             .sheet(isPresented: $showLightTable) { LightTableView(store: store, isPresented: $showLightTable) }
             .sheet(isPresented: $showPlaces) { PlacesMapView(store: store, isPresented: $showPlaces) }
             .sheet(isPresented: $showDuplicates) { DuplicatesView(store: store, isPresented: $showDuplicates) }
+            .sheet(isPresented: $showCompare) { CompareView(store: store, isPresented: $showCompare) }
+    }
+
+    /// Prints the selected photo (full resolution, aspect-fit to page).
+    private func printSelected() {
+        guard let lib = store.library, let photo = store.selectedPhoto else { return }
+        Task {
+            guard let image = await ImageCache.shared.fullImage(for: photo, in: lib) else { return }
+            await MainActor.run {
+                let imageView = NSImageView(image: image)
+                imageView.imageScaling = .scaleProportionallyUpOrDown
+                let info = NSPrintInfo.shared
+                info.horizontalPagination = .fit
+                info.verticalPagination = .fit
+                info.orientation = image.size.width >= image.size.height ? .landscape : .portrait
+                imageView.frame = NSRect(origin: .zero, size: info.imageablePageBounds.size)
+                let op = NSPrintOperation(view: imageView, printInfo: info)
+                op.jobTitle = photo.version.name
+                op.run()
+            }
+        }
     }
 
     // MARK: - Center column

@@ -15,7 +15,9 @@ struct ImageViewer: View {
     @State private var hover: CGPoint?
 
     private let loupeDiameter: CGFloat = 180
-    private let loupeZoom: CGFloat = 2.5
+    /// Aperture offered 50%–1600%; step through with = / - while the loupe is on.
+    @State private var loupeZoom: CGFloat = 2.5
+    private let loupeZoomLevels: [CGFloat] = [0.5, 1, 1.5, 2.5, 4, 8, 16]
 
     var body: some View {
         ZStack {
@@ -46,9 +48,20 @@ struct ImageViewer: View {
                 .keyboardShortcut("f", modifiers: [])
             Button("") { store.showAdjustmentsHUD.toggle() }
                 .keyboardShortcut("h", modifiers: [])
+            Button("") { stepLoupeZoom(1) }
+                .keyboardShortcut("=", modifiers: [])
+            Button("") { stepLoupeZoom(-1) }
+                .keyboardShortcut("-", modifiers: [])
         }
         .opacity(0)
         .frame(width: 0, height: 0)
+    }
+
+    private func stepLoupeZoom(_ direction: Int) {
+        guard loupeEnabled else { return }
+        let idx = loupeZoomLevels.firstIndex { $0 >= loupeZoom } ?? 3
+        let next = max(0, min(loupeZoomLevels.count - 1, idx + direction))
+        loupeZoom = loupeZoomLevels[next]
     }
 
     /// Aperture-style floating Adjustments HUD.
@@ -156,6 +169,14 @@ struct ImageViewer: View {
         .frame(width: d, height: d)
         .clipShape(Circle())
         .overlay(Circle().strokeBorder(.white.opacity(0.9), lineWidth: 2))
+        .overlay(alignment: .bottom) {
+            Text(String(format: "%.0f%%", loupeZoom * 100))
+                .font(.caption2).monospacedDigit()
+                .padding(.horizontal, 6).padding(.vertical, 1)
+                .background(.black.opacity(0.7), in: Capsule())
+                .foregroundStyle(.white)
+                .offset(y: 10)
+        }
         .shadow(radius: 6)
         .position(p)
         .allowsHitTesting(false)
