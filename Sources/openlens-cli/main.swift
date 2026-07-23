@@ -80,6 +80,18 @@ do {
         exit(0)
     }
 
+    if args.contains("--verify") {
+        let report = try library.checkConsistency()
+        print("Checked \(report.photosChecked) photo(s).")
+        if report.isHealthy {
+            print("Library is healthy ✓")
+        } else {
+            print("\(report.issues.count) issue(s):")
+            for issue in report.issues { print("  ⚠️  \(issue)") }
+        }
+        exit(report.isHealthy ? 0 : 1)
+    }
+
     if args.contains("--search"), let i = args.firstIndex(of: "--search") {
         guard i + 1 < args.count else { fail("--search requires a query") }
         let hits = try library.search(args[i + 1])
