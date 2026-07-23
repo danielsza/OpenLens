@@ -47,6 +47,10 @@ struct OpenLensApp: App {
                     NotificationCenter.default.post(name: .lightTableRequested, object: nil)
                 }
                 .keyboardShortcut("l", modifiers: [.command, .option])
+                Button("Places") {
+                    NotificationCenter.default.post(name: .placesRequested, object: nil)
+                }
+                .keyboardShortcut("p", modifiers: [.command, .option])
             }
             CommandMenu("Photo") {
                 Button("Duplicate Version") {
@@ -95,6 +99,7 @@ extension Notification.Name {
     static let saveSmartAlbumRequested = Notification.Name("saveSmartAlbumRequested")
     static let slideshowRequested = Notification.Name("slideshowRequested")
     static let lightTableRequested = Notification.Name("lightTableRequested")
+    static let placesRequested = Notification.Name("placesRequested")
     static let openLibraryRequested = Notification.Name("openLibraryRequested")
     static let closeLibraryRequested = Notification.Name("closeLibraryRequested")
 }

@@ -9,6 +9,7 @@ struct ContentView: View {
     @State private var showExport = false
     @State private var showSlideshow = false
     @State private var showLightTable = false
+    @State private var showPlaces = false
 
     var body: some View {
         mainView
@@ -64,6 +65,9 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .lightTableRequested)) { _ in
                 if !store.visiblePhotos.isEmpty { showLightTable = true }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .placesRequested)) { _ in
+                if store.library != nil { showPlaces = true }
+            }
             .alert("Library error",
                    isPresented: Binding(get: { store.errorMessage != nil },
                                         set: { if !$0 { store.errorMessage = nil } })) {
@@ -90,6 +94,7 @@ struct ContentView: View {
             .sheet(isPresented: $showExport) { ExportSheet(store: store, isPresented: $showExport) }
             .sheet(isPresented: $showSlideshow) { SlideshowView(store: store, isPresented: $showSlideshow) }
             .sheet(isPresented: $showLightTable) { LightTableView(store: store, isPresented: $showLightTable) }
+            .sheet(isPresented: $showPlaces) { PlacesMapView(store: store, isPresented: $showPlaces) }
     }
 
     // MARK: - Center column

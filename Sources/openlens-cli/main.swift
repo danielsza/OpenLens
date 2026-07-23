@@ -28,6 +28,7 @@ guard let libPath = args.first else {
       openlens-cli <library.aplibrary> --import <projectUuid> <file...>
       openlens-cli <library.aplibrary> --duplicate <versionUuid>
       openlens-cli <library.aplibrary> --verify [--repair]
+      openlens-cli <library.aplibrary> --duplicates
     """)
 }
 
@@ -78,6 +79,19 @@ do {
         let writer = ApertureLibraryWriter(libraryURL: libURL, allowWrites: true)
         let newUuid = try writer.duplicateVersion(args[i + 1])
         print("Duplicated \(args[i + 1]) -> \(newUuid)")
+        exit(0)
+    }
+
+    if args.contains("--duplicates") {
+        let groups = try library.findDuplicates()
+        if groups.isEmpty {
+            print("No byte-identical duplicate masters found ✓")
+        } else {
+            print("\(groups.count) duplicate group(s):")
+            for g in groups {
+                print("  • \(g.map { $0.version.name }.joined(separator: ", "))")
+            }
+        }
         exit(0)
     }
 

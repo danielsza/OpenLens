@@ -274,6 +274,11 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   tests, builds OpenLens.app, and publishes a GitHub Release with the zip +
   CLI attached. To cut v0.1.0: `git tag v0.1.0 && git push origin v0.1.0`.
 
+- **2026-07-23** Duplicate detection (`findDuplicates`: size-group → SHA-256,
+  one representative per master; Aperture's imageHash is empty in real
+  libraries) + CLI `--duplicates` + test. **Places map** (MapKit) of geotagged
+  photos with clickable pins — View ▸ Places (⌥⌘P).
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.
