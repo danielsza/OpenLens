@@ -14,6 +14,7 @@ struct ExportSheet: View {
     @AppStorage("export.quality") private var quality = 0.9
     @AppStorage("export.dpi") private var dpiText = ""
     @AppStorage("export.suffix") private var nameSuffix = ""
+    @AppStorage("export.preserveMeta") private var preserveMetadata = true
     @AppStorage("export.wmText") private var watermarkText = ""
     @AppStorage("export.logoPath") private var logoPath = ""
     @AppStorage("export.wmScale") private var watermarkScale = 0.25
@@ -73,6 +74,7 @@ struct ExportSheet: View {
                     }
                     TextField("Resolution (DPI, optional)", text: $dpiText)
                     TextField("Add to file name (e.g. _web)", text: $nameSuffix)
+                    Toggle("Include EXIF/IPTC metadata", isOn: $preserveMetadata)
 
                     Divider()
                     Text("Watermark").font(.headline)
@@ -167,7 +169,8 @@ struct ExportSheet: View {
         let settings = ExportSettings(
             format: format, maxPixelSize: effectiveMaxEdge, jpegQuality: quality,
             dpi: Double(dpiText.trimmingCharacters(in: .whitespaces)), watermark: watermark,
-            fileNameSuffix: nameSuffix.trimmingCharacters(in: .whitespaces))
+            fileNameSuffix: nameSuffix.trimmingCharacters(in: .whitespaces),
+            preserveMetadata: preserveMetadata)
 
         let result = Exporter(library: lib).exportBatch(photos, to: dest, settings: settings)
         isPresented = false

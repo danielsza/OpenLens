@@ -3,20 +3,22 @@ import AppKit
 import OpenLensKit
 
 /// The large image viewer (Aperture's "Viewer"). Shows the selected photo on a
-/// near-black background.
+/// near-black background, with an optional Loupe magnifier (` key).
 struct ImageViewer: View {
     @ObservedObject var store: LibraryStore
     @State private var image: NSImage?
+    @State private var loupeEnabled = false
+    @State private var hover: CGPoint?
+
+    private let loupeDiameter: CGFloat = 180
+    private let loupeZoom: CGFloat = 2.5
 
     var body: some View {
         ZStack {
             Theme.viewerBackground
             if store.selectedPhoto != nil {
                 if let image {
-                    Image(nsImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .padding(16)
+                    viewerBody(image)
                 } else {
                     ProgressView()
                 }
@@ -26,6 +28,66 @@ struct ImageViewer: View {
             }
         }
         .task(id: store.selectedPhotoID) { await load() }
+        .background(loupeShortcut)
+    }
+
+    private var loupeShortcut: some View {
+        Button("") { loupeEnabled.toggle() }
+            .keyboardShortcut("`", modifiers: [])
+            .opacity(0)
+            .frame(width: 0, height: 0)
+    }
+
+    @ViewBuilder
+    private func viewerBody(_ image: NSImage) -> some View {
+        GeometryReader { geo in
+            let fitted = fittedRect(imageSize: image.size, in: geo.size)
+            ZStack(alignment: .topLeading) {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .onContinuousHover { phase in
+                        switch phase {
+                        case .active(let p): hover = p
+                        case .ended: hover = nil
+                        }
+                    }
+
+                if loupeEnabled, let p = hover, fitted.contains(p) {
+                    loupe(image, fitted: fitted, at: p)
+                }
+            }
+        }
+        .padding(16)
+    }
+
+    /// A circular magnifier centred on the cursor showing a zoomed crop.
+    private func loupe(_ image: NSImage, fitted: CGRect, at p: CGPoint) -> some View {
+        let d = loupeDiameter, z = loupeZoom
+        // Where the hovered point lands in the zoomed image, so we can offset
+        // the zoomed image to put that point at the loupe's centre.
+        let zx = (p.x - fitted.minX) * z
+        let zy = (p.y - fitted.minY) * z
+        return ZStack(alignment: .topLeading) {
+            Image(nsImage: image)
+                .resizable()
+                .frame(width: fitted.width * z, height: fitted.height * z)
+                .offset(x: d / 2 - zx, y: d / 2 - zy)
+        }
+        .frame(width: d, height: d)
+        .clipShape(Circle())
+        .overlay(Circle().strokeBorder(.white.opacity(0.9), lineWidth: 2))
+        .shadow(radius: 6)
+        .position(p)
+        .allowsHitTesting(false)
+    }
+
+    private func fittedRect(imageSize: CGSize, in container: CGSize) -> CGRect {
+        guard imageSize.width > 0, imageSize.height > 0 else { return .zero }
+        let scale = min(container.width / imageSize.width, container.height / imageSize.height)
+        let w = imageSize.width * scale, h = imageSize.height * scale
+        return CGRect(x: (container.width - w) / 2, y: (container.height - h) / 2, width: w, height: h)
     }
 
     private func load() async {

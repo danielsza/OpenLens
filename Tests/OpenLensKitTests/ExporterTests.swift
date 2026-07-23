@@ -1,5 +1,6 @@
 import XCTest
 import CoreGraphics
+import ImageIO
 @testable import OpenLensKit
 
 /// Export tests, run against a real library when OPENLENS_TEST_LIBRARY is set
@@ -70,6 +71,48 @@ final class ExporterTests: XCTestCase {
         let suffixed = try exporter.export(photo, to: dir,
             settings: ExportSettings(format: .jpeg, maxPixelSize: 100, fileNameSuffix: "_web"))
         XCTAssertTrue(suffixed.deletingPathExtension().lastPathComponent.hasSuffix("_web"))
+    }
+
+    func testExportPreservesSourceMetadata() throws {
+        // Build a source JPEG carrying TIFF/EXIF metadata.
+        let src = FileManager.default.temporaryDirectory
+            .appendingPathComponent("meta-\(UUID().uuidString).jpg")
+        defer { try? FileManager.default.removeItem(at: src) }
+        let cs = CGColorSpaceCreateDeviceRGB()
+        let ctx = try XCTUnwrap(CGContext(data: nil, width: 40, height: 30, bitsPerComponent: 8,
+                                          bytesPerRow: 0, space: cs,
+                                          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        ctx.setFillColor(CGColor(red: 0.5, green: 0.4, blue: 0.3, alpha: 1))
+        ctx.fill(CGRect(x: 0, y: 0, width: 40, height: 30))
+        let img = try XCTUnwrap(ctx.makeImage())
+        let dest = try XCTUnwrap(CGImageDestinationCreateWithURL(src as CFURL, "public.jpeg" as CFString, 1, nil))
+        let meta: [CFString: Any] = [
+            kCGImagePropertyTIFFDictionary: [kCGImagePropertyTIFFMake: "TestCam Inc."],
+            kCGImagePropertyExifDictionary: [kCGImagePropertyExifISOSpeedRatings: [640]]
+        ]
+        CGImageDestinationAddImage(dest, img, meta as CFDictionary)
+        XCTAssertTrue(CGImageDestinationFinalize(dest))
+
+        // Import into a fresh library, export rendered, read metadata back.
+        let libURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("OpenLens-meta-\(UUID().uuidString).aplibrary")
+        defer { try? FileManager.default.removeItem(at: libURL) }
+        let created = try ApertureLibraryCreator.createLibrary(at: libURL, firstProjectNamed: "P")
+        let project = try XCTUnwrap(created.projects().first?.id)
+        let writer = ApertureLibraryWriter(libraryURL: libURL, allowWrites: true)
+        _ = try writer.importImage(at: src, intoProject: project)
+
+        let lib = try ApertureLibrary(url: libURL)
+        let photo = try XCTUnwrap(try lib.photos().first)
+        let outDir = try makeTempDir()
+        defer { try? FileManager.default.removeItem(at: outDir) }
+        let out = try Exporter(library: lib).export(photo, to: outDir,
+            settings: ExportSettings(format: .jpeg, maxPixelSize: 0))
+
+        let osrc = try XCTUnwrap(CGImageSourceCreateWithURL(out as CFURL, nil))
+        let props = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(osrc, 0, nil) as? [CFString: Any])
+        let tiff = props[kCGImagePropertyTIFFDictionary] as? [CFString: Any]
+        XCTAssertEqual(tiff?[kCGImagePropertyTIFFMake] as? String, "TestCam Inc.")
     }
 
     func testBatchExportAndUniqueNaming() throws {

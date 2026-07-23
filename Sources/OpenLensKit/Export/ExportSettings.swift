@@ -16,15 +16,19 @@ public struct ExportSettings {
     public var watermark: Watermark?
     /// Appended to the base file name (e.g. "_web") before the extension.
     public var fileNameSuffix: String = ""
+    /// Carry the source's EXIF/TIFF/IPTC/GPS metadata into the exported file.
+    public var preserveMetadata: Bool = true
 
     public init(format: Format = .jpeg, maxPixelSize: Int = 0, jpegQuality: Double = 0.9,
-                dpi: Double? = nil, watermark: Watermark? = nil, fileNameSuffix: String = "") {
+                dpi: Double? = nil, watermark: Watermark? = nil, fileNameSuffix: String = "",
+                preserveMetadata: Bool = true) {
         self.format = format
         self.maxPixelSize = maxPixelSize
         self.jpegQuality = jpegQuality
         self.dpi = dpi
         self.watermark = watermark
         self.fileNameSuffix = fileNameSuffix
+        self.preserveMetadata = preserveMetadata
     }
 
     var fileExtension: String {
@@ -103,10 +107,25 @@ public extension Exporter {
         let rendered = Exporter.applyWatermark(cg, settings.watermark)
         let dest = uniqueURL(in: directory, base: photo.version.name + settings.fileNameSuffix,
                              ext: settings.fileExtension)
-        guard Exporter.encode(rendered, to: dest, settings: settings) else {
+        let sourceMeta = settings.preserveMetadata ? Exporter.sourceMetadata(of: src) : [:]
+        guard Exporter.encode(rendered, to: dest, settings: settings, sourceMetadata: sourceMeta) else {
             throw ExportError.encodeFailed(photo.version.name)
         }
         return dest
+    }
+
+    /// EXIF/TIFF/IPTC/GPS dictionaries from the source file, for carry-over.
+    static func sourceMetadata(of url: URL) -> [CFString: Any] {
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any] else {
+            return [:]
+        }
+        var out: [CFString: Any] = [:]
+        for key in [kCGImagePropertyExifDictionary, kCGImagePropertyTIFFDictionary,
+                    kCGImagePropertyIPTCDictionary, kCGImagePropertyGPSDictionary] {
+            if let dict = props[key] { out[key] = dict }
+        }
+        return out
     }
 
     @discardableResult
@@ -123,11 +142,12 @@ public extension Exporter {
 
     // MARK: - Rendering
 
-    static func encode(_ cg: CGImage, to url: URL, settings: ExportSettings) -> Bool {
+    static func encode(_ cg: CGImage, to url: URL, settings: ExportSettings,
+                       sourceMetadata: [CFString: Any] = [:]) -> Bool {
         guard let dest = CGImageDestinationCreateWithURL(url as CFURL, settings.uti, 1, nil) else {
             return false
         }
-        var props: [CFString: Any] = [:]
+        var props: [CFString: Any] = sourceMetadata
         if settings.format == .jpeg {
             props[kCGImageDestinationLossyCompressionQuality] = max(0, min(1, settings.jpegQuality))
         }

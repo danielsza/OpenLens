@@ -250,6 +250,10 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   Claude writes locally, Daniel commits/pushes (`git reset origin/main` first
   if HEAD is stale, then add/commit/push).
 
+- **2026-06-20** Loupe magnifier in the viewer (` key toggles; 2.5× circular
+  magnifier follows the cursor). Export now **preserves EXIF/TIFF/IPTC/GPS
+  metadata** in rendered files (toggle in Export dialog, on by default) + test.
+
 ### Current state (end of 2026-06-17 session)
 - 45 tests, all green in CI; tip of `main` builds on macOS/Xcode 15.
 - The whole testable surface of the reader + safe writes is covered.
