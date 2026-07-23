@@ -105,15 +105,28 @@ struct Filmstrip: View {
                             .id(photo.id)
                     }
                 }
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 16)
                 .padding(.vertical, 8)
             }
             .background(Theme.browserBackground)
+            // Bookends: fade the strip out at both edges like Aperture.
+            .overlay(alignment: .leading) { edgeFade(leading: true) }
+            .overlay(alignment: .trailing) { edgeFade(leading: false) }
+            .overlay(alignment: .top) { Rectangle().fill(Color.black.opacity(0.25)).frame(height: 1) }
             .onChange(of: store.selectedPhotoID) { id in
                 guard let id else { return }
                 withAnimation { proxy.scrollTo(id, anchor: .center) }
             }
         }
+    }
+
+    private func edgeFade(leading: Bool) -> some View {
+        LinearGradient(
+            colors: [Theme.browserBackground, Theme.browserBackground.opacity(0)],
+            startPoint: leading ? .leading : .trailing,
+            endPoint: leading ? .trailing : .leading)
+            .frame(width: 22)
+            .allowsHitTesting(false)
     }
 }
 

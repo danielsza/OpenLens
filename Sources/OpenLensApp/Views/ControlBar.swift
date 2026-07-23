@@ -66,6 +66,15 @@ struct ControlBar: View {
 
             Spacer()
 
+            Button {
+                store.showAdjustmentsHUD.toggle()
+            } label: {
+                Image(systemName: "slider.horizontal.3")
+                    .foregroundStyle(store.showAdjustmentsHUD ? Color.accentColor : Theme.textSecondary)
+            }
+            .buttonStyle(.plain)
+            .help("Adjustments HUD (H)")
+
             // Thumbnail size
             Image(systemName: "photo").font(.system(size: 9)).foregroundStyle(Theme.textSecondary)
             Slider(value: $store.thumbnailSize, in: 90...320).frame(width: 130)

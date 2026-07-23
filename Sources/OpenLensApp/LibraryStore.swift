@@ -151,7 +151,9 @@ final class LibraryStore: ObservableObject {
 
     /// Handles a thumbnail click with optional Command (toggle) / Shift (range).
     func handleTap(_ photo: Photo, command: Bool, shift: Bool) {
-        if photo.id != selectedPhotoID { liveAdjustments = nil }
+        let changed = photo.id != selectedPhotoID
+        if changed { liveAdjustments = nil }
+        defer { if changed { syncEditParams() } }
         if command {
             if selectedPhotoIDs.contains(photo.id) { selectedPhotoIDs.remove(photo.id) }
             else { selectedPhotoIDs.insert(photo.id) }
@@ -191,6 +193,24 @@ final class LibraryStore: ObservableObject {
     @Published var liveAdjustments: OLAdjustments?
     /// Bumped on every live change so the viewer re-renders.
     @Published var adjustmentsRevision = 0
+    /// The floating Adjustments HUD over the viewer (Aperture-style).
+    @Published var showAdjustmentsHUD = false
+
+    /// The values currently being edited (shared by the inspector tab and the
+    /// HUD so they stay in sync) and their last-saved baseline.
+    @Published var editParams = OLAdjustments()
+    @Published var savedEditParams = OLAdjustments()
+    var adjustmentsDirty: Bool { editParams != savedEditParams }
+
+    /// Reloads edit params from the selected photo's saved adjustments.
+    func syncEditParams() {
+        if let photo = selectedPhoto, let lib = library {
+            savedEditParams = lib.olAdjustments(for: photo) ?? OLAdjustments()
+        } else {
+            savedEditParams = OLAdjustments()
+        }
+        editParams = savedEditParams
+    }
 
     func previewAdjustments(_ params: OLAdjustments) {
         liveAdjustments = params
@@ -205,6 +225,8 @@ final class LibraryStore: ObservableObject {
             reload()
             selectedPhotoID = photo.id
             selectedPhotoIDs = [photo.id]
+            savedEditParams = params
+            editParams = params
         } catch { errorMessage = "Couldn't save adjustments: \(error)" }
     }
 
@@ -400,6 +422,7 @@ final class LibraryStore: ObservableObject {
         if photos[next].id != selectedPhotoID { liveAdjustments = nil }
         selectedPhotoID = photos[next].id
         selectedPhotoIDs = [photos[next].id]
+        syncEditParams()
     }
 
     func toggleFlag(for photo: Photo) {

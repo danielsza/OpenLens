@@ -373,6 +373,14 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   old edits) remains blocked on an edited sample library. + tests (render
   brightness delta, save/load/clear round-trip).
 
+- **2026-07-23** UI matched to Daniel's Aperture 3 reference (Wikipedia shot):
+  **RGB histogram** (additive channel overlay), **adjustment bricks** (White
+  Balance/Exposure/Enhance/Highlights & Shadows/Sharpen) shared between the
+  inspector tab and a new **floating Adjustments HUD** over the viewer (H key
+  or control-bar button; ultraThinMaterial dark panel); viewer image gets a
+  shadow + hairline frame bookend; filmstrip gets edge fades + top hairline.
+  Edit state centralized in the store (`editParams`/`savedEditParams`).
+
 ### Current state (as of 2026-07-23)
 - ~95 tests, green in CI; near-complete Aperture parity for viewing/organizing,
   validated against a real 676MB library (babcia). Daniel is actively testing

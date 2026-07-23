@@ -44,9 +44,35 @@ struct ImageViewer: View {
                 .keyboardShortcut("`", modifiers: [])
             Button("") { showFaces.toggle() }
                 .keyboardShortcut("f", modifiers: [])
+            Button("") { store.showAdjustmentsHUD.toggle() }
+                .keyboardShortcut("h", modifiers: [])
         }
         .opacity(0)
         .frame(width: 0, height: 0)
+    }
+
+    /// Aperture-style floating Adjustments HUD.
+    private var adjustmentsHUD: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label("Adjustments", systemImage: "slider.horizontal.3")
+                    .font(.caption.bold())
+                Spacer()
+                Button {
+                    store.showAdjustmentsHUD = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            AdjustmentControls(store: store, compact: true)
+        }
+        .padding(10)
+        .frame(width: 280)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.15)))
+        .shadow(radius: 10)
+        .environment(\.colorScheme, .dark)
     }
 
     @ViewBuilder
@@ -54,6 +80,15 @@ struct ImageViewer: View {
         GeometryReader { geo in
             let fitted = fittedRect(imageSize: image.size, in: geo.size)
             ZStack(alignment: .topLeading) {
+                // Aperture-style bookend: soft shadow + hairline frame around
+                // the photo itself.
+                Rectangle()
+                    .fill(Color.black.opacity(0.45))
+                    .frame(width: fitted.width + 6, height: fitted.height + 6)
+                    .position(x: fitted.midX + 2, y: fitted.midY + 3)
+                    .blur(radius: 6)
+                    .allowsHitTesting(false)
+
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFit()
@@ -64,6 +99,12 @@ struct ImageViewer: View {
                         case .ended: hover = nil
                         }
                     }
+
+                Rectangle()
+                    .strokeBorder(Color.white.opacity(0.18), lineWidth: 1)
+                    .frame(width: fitted.width + 2, height: fitted.height + 2)
+                    .position(x: fitted.midX, y: fitted.midY)
+                    .allowsHitTesting(false)
 
                 if showFaces {
                     ForEach(faces) { face in
@@ -88,6 +129,11 @@ struct ImageViewer: View {
 
                 if loupeEnabled, let p = hover, fitted.contains(p) {
                     loupe(image, fitted: fitted, at: p)
+                }
+
+                if store.showAdjustmentsHUD {
+                    adjustmentsHUD
+                        .position(x: geo.size.width - 160, y: min(geo.size.height - 220, 260))
                 }
             }
         }
