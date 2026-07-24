@@ -85,12 +85,25 @@ final class ImageCache {
                   w > 0, h > 0 else { return nil }
             return CGSize(width: w, height: h)
         }()
+        // When adjusting a RAW master, develop it through CIRAWFilter with
+        // Aperture's original Raw Fine Tuning (boost/sharpen) for fidelity.
+        let rawTuning: RawFineTuning? = {
+            guard params != nil, RawRenderer.isRawFile(url) else { return nil }
+            let rawOp = library.decodedApertureAdjustments(for: photo)
+                .first { $0.identifier == "RKRawDecodeOperation" }
+            return rawOp.flatMap(RawFineTuning.init(from:)) ?? RawFineTuning()
+        }()
         let cg = await Task.detached(priority: .userInitiated) { () -> CGImage? in
-            guard var base = ImageLoader.cgImage(at: url, maxPixelSize: 2400) else { return nil }
-            if let params {
-                base = AdjustmentRenderer.apply(params, to: base, masterPixelSize: masterSize)
+            var base: CGImage?
+            if let rawTuning {
+                base = RawRenderer.render(at: url, tuning: rawTuning, maxPixelSize: 2400)
             }
-            return ImageLoader.rotate(base, degrees: applyRotation)
+            base = base ?? ImageLoader.cgImage(at: url, maxPixelSize: 2400)
+            guard var image = base else { return nil }
+            if let params {
+                image = AdjustmentRenderer.apply(params, to: image, masterPixelSize: masterSize)
+            }
+            return ImageLoader.rotate(image, degrees: applyRotation)
         }.value
         guard let cg else { return nil }
         let image = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))

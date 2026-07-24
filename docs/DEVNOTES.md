@@ -58,6 +58,15 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
   Width via new `masterPixelSize` param (passed by viewer/export/thumbnails).
   Import maps RKCropOperation + RKStraightenCropOperation (inputRotation °).
 
+- **2026-07-24** **Raw Fine Tuning v1** (CIRAWFilter): `RawRenderer.render`
+  develops RAW files with `RawFineTuning` (boost ← inputBoostAmount,
+  sharpness ← inputSharpenIntensity when inputSharpenEnabled). Viewer path:
+  when adjusting a RAW master, ImageCache develops via CIRAWFilter using the
+  photo's own Aperture raw params (default tuning if none) before OL color
+  adjustments. CI proves it on the committed CR2 (boost 0 vs 1 differ in mean
+  luminance). Unverified blind spots: CIRAWFilter orientation handling on
+  rotated shots; chroma-blur/moire keys not yet mapped.
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)
