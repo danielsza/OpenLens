@@ -68,6 +68,19 @@ corrupted SQLite's heap. Fix: **open every connection with
   slider becomes a 1–8× zoom (drag to pan, double-click resets); clicking any
   thumbnail returns the slider to thumbnail-size mode.
 
+- **2026-07-24** **LEGACY ADJUSTMENTS DECODED** (the long-blocked feature):
+  SSH'd to the Mac Mini (fresh sandbox keypair, `~/.ssh/openlens_key`;
+  authorize its .pub on targets) and read the real 68k-master library in place
+  (`/Volumes/8TB/imac 09.2024/apeture/Aperture Library.aplibrary`). Blob format:
+  NSKeyedArchiver → root dict {DGOperationIdentifier, DGOperationDisplayName,
+  enabled, inputKeys{inputEV, inputTemperature/Tint, crop X/Y/W/H, …}}.
+  ~18k RKRawDecodeOperation rows are EMPTY defaults (one per RAW import) —
+  filtered out; ~750 real user edits. Swift `ApertureAdjustmentDecoder` uses
+  NSKeyedUnarchiver + class-substitution stub (no AppKit needed for NSColor).
+  Real blobs embedded as test fixtures. Inspector shows decoded params.
+  Also: real CR2 fixture committed (Tests/Fixtures/raw) + RAW decode CI test;
+  full 244MB catalog copying to /tmp/biglib.apdb for at-scale validation.
+
 ## Hard-won format lessons (see also docs/aperture-format.md)
 1. **Dates** are seconds since 2001-01-01 (NSDate epoch), not Unix.
 2. **Ratings/flags/labels live in two places**: `RKVersion` *and* the

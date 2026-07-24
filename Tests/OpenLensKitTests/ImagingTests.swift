@@ -28,6 +28,22 @@ final class ImagingTests: XCTestCase {
         }
     }
 
+    func testDecodesCanonRAW() throws {
+        // Real CR2 sampled from Daniel's library (committed fixture).
+        let cr2 = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()          // OpenLensKitTests
+            .deletingLastPathComponent()          // Tests
+            .appendingPathComponent("Fixtures/raw/_MG_0840.CR2")
+        guard FileManager.default.fileExists(atPath: cr2.path) else {
+            throw XCTSkip("CR2 fixture not present")
+        }
+        XCTAssertTrue(ImageLoader.canDecode(cr2))
+        let size = try XCTUnwrap(ImageLoader.pixelSize(at: cr2))
+        XCTAssertGreaterThan(size.width, 1000)
+        let thumb = try XCTUnwrap(ImageLoader.cgImage(at: cr2, maxPixelSize: 256))
+        XCTAssertLessThanOrEqual(max(thumb.width, thumb.height), 300)
+    }
+
     func testHistogram() throws {
         let lib = try openTestLibrary()
         let photo = try XCTUnwrap(try lib.photos().first)

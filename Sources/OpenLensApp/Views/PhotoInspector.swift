@@ -198,7 +198,7 @@ struct InfoInspector: View {
 /// photo; editing is a future milestone.
 struct AdjustmentsInspector: View {
     @ObservedObject var store: LibraryStore
-    @State private var apertureAdjustments: [String] = []
+    @State private var apertureOps: [ApertureEditOperation] = []
     @State private var histogram: ImageLoader.Histogram?
 
     var body: some View {
@@ -210,13 +210,27 @@ struct AdjustmentsInspector: View {
 
                     AdjustmentControls(store: store)
 
-                    if !apertureAdjustments.isEmpty {
+                    if !apertureOps.isEmpty {
                         Divider()
-                        Text("Aperture edits on this photo").font(.caption).foregroundStyle(.secondary)
-                        ForEach(apertureAdjustments, id: \.self) { a in
-                            Label(a, systemImage: "slider.horizontal.3").font(.caption)
+                        Text("Aperture edits on this photo").font(.caption.bold()).foregroundStyle(.secondary)
+                        ForEach(apertureOps) { op in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Label(op.displayName, systemImage: "slider.horizontal.3")
+                                    .font(.caption)
+                                    .foregroundStyle(op.enabled ? .primary : .secondary)
+                                ForEach(op.displayParameters, id: \.name) { param in
+                                    HStack {
+                                        Text(param.name).font(.caption2).foregroundStyle(.secondary)
+                                        Spacer()
+                                        Text(String(format: "%.2f", param.value))
+                                            .font(.caption2).monospacedDigit()
+                                    }
+                                    .padding(.leading, 22)
+                                }
+                            }
+                            .padding(.vertical, 2)
                         }
-                        Text("Shown via Aperture's rendered preview; re-editing them requires the adjustment decoder (planned).")
+                        Text("Displayed via Aperture's rendered preview.")
                             .font(.caption2).foregroundStyle(.secondary)
                     }
                 }
@@ -232,9 +246,8 @@ struct AdjustmentsInspector: View {
 
     private func load(_ photo: Photo) async {
         store.syncEditParams()
-        guard let lib = store.library else { apertureAdjustments = []; histogram = nil; return }
-        let all = (try? lib.enabledAdjustmentNames(for: photo)) ?? []
-        apertureAdjustments = all.filter { $0 != "OLAdjustmentsV1" }
+        guard let lib = store.library else { apertureOps = []; histogram = nil; return }
+        apertureOps = lib.decodedApertureAdjustments(for: photo)
         histogram = nil
         let url = lib.displayImageURL(for: photo)
         histogram = await Task.detached(priority: .utility) {
