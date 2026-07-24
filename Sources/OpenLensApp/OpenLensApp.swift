@@ -59,6 +59,9 @@ struct OpenLensApp: App {
                 Button("Save Filter as Smart Album…") {
                     NotificationCenter.default.post(name: .saveSmartAlbumRequested, object: nil)
                 }
+                Button("Back Up Library…") {
+                    NotificationCenter.default.post(name: .backupRequested, object: nil)
+                }
             }
             // Append to the system View menu (a CommandMenu("View") would
             // create a duplicate second "View" menu).
@@ -135,6 +138,7 @@ extension Notification.Name {
     static let emptyTrashRequested = Notification.Name("emptyTrashRequested")
     static let exportRequested = Notification.Name("exportRequested")
     static let saveSmartAlbumRequested = Notification.Name("saveSmartAlbumRequested")
+    static let backupRequested = Notification.Name("backupRequested")
     static let slideshowRequested = Notification.Name("slideshowRequested")
     static let lightTableRequested = Notification.Name("lightTableRequested")
     static let placesRequested = Notification.Name("placesRequested")

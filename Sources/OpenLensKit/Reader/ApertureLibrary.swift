@@ -175,10 +175,24 @@ public final class ApertureLibrary {
         }
     }
 
-    /// Absolute URL of the original file backing a master (when stored inside
-    /// the library; referenced masters are resolved elsewhere via aliases).
+    /// Absolute URL of the original file backing a master.
+    ///
+    /// Managed masters live under `Masters/<relative path>`. Referenced
+    /// masters (files kept in place) store an absolute path in `imagePath`
+    /// when imported by OpenLens; for Aperture-imported references we fall
+    /// back to trying the path as absolute. (Aperture's alias blobs are not
+    /// decoded yet.)
     public func masterFileURL(for master: PhotoMaster) -> URL {
-        mastersURL.appendingPathComponent(master.imagePath)
+        if master.isReference {
+            if master.imagePath.hasPrefix("/") {
+                return URL(fileURLWithPath: master.imagePath)
+            }
+            let asAbsolute = URL(fileURLWithPath: "/" + master.imagePath)
+            if FileManager.default.fileExists(atPath: asAbsolute.path) {
+                return asAbsolute
+            }
+        }
+        return mastersURL.appendingPathComponent(master.imagePath)
     }
 
     // MARK: - Helpers

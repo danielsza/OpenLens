@@ -43,11 +43,18 @@ public extension ApertureLibrary {
         for v in allVersions where masters[v.masterUuid] == nil {
             report.issues.append(.orphanVersion(versionUuid: v.id))
         }
-        for photo in live where !photo.master.isReference {
-            let url = masterFileURL(for: photo.master)
-            if !fm.fileExists(atPath: url.path) {
-                report.issues.append(.missingMasterFile(versionName: photo.version.name,
-                                                        path: photo.master.imagePath))
+        for photo in live {
+            // Managed masters must exist; referenced masters are checked when
+            // their path is resolvable (absolute). Legacy Aperture references
+            // with unresolved aliases are skipped rather than flagged.
+            let checkable = !photo.master.isReference
+                || photo.master.imagePath.hasPrefix("/")
+            if checkable {
+                let url = masterFileURL(for: photo.master)
+                if !fm.fileExists(atPath: url.path) {
+                    report.issues.append(.missingMasterFile(versionName: photo.version.name,
+                                                            path: photo.master.imagePath))
+                }
             }
             // Plist + referenced thumbnail.
             if let meta = metadata(for: photo) {

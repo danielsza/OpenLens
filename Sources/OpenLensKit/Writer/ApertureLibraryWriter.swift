@@ -472,13 +472,15 @@ public final class ApertureLibraryWriter {
 
     // MARK: - Import
 
-    /// Imports an image file into a project as a managed master (copies the file
-    /// into the library's `Masters/` tree and authors `RKMaster`/`RKVersion`).
-    /// Returns the new version's uuid. Thumbnails/EXIF plists aren't generated
-    /// yet — the reader falls back to decoding the master for display.
+    /// Imports an image file into a project. By default the file is copied into
+    /// the library's `Masters/` tree (managed). With `referenced: true` the
+    /// file stays exactly where it is (its absolute path is recorded), like
+    /// Aperture's "store files in their current location". Returns the new
+    /// version's uuid.
     @discardableResult
     public func importImage(at source: URL, intoProject projectUuid: String,
-                            fileName: String? = nil) throws -> String {
+                            fileName: String? = nil,
+                            referenced: Bool = false) throws -> String {
         guard allowWrites else { throw WriteError.writesNotAllowed }
         let fm = FileManager.default
 
@@ -490,21 +492,28 @@ public final class ApertureLibraryWriter {
         let stampFmt = DateFormatter(); stampFmt.dateFormat = "yyyyMMdd-HHmmss"
         let datePath = "\(dayFmt.string(from: date))/\(stampFmt.string(from: date))"
 
-        let mastersDir = libraryURL.appendingPathComponent("Masters").appendingPathComponent(datePath)
-        try fm.createDirectory(at: mastersDir, withIntermediateDirectories: true)
-
-        let baseName = fileName ?? source.lastPathComponent
-        var dest = mastersDir.appendingPathComponent(baseName)
-        var counter = 1
-        while fm.fileExists(atPath: dest.path) {
-            let stem = (baseName as NSString).deletingPathExtension
-            let ext = (baseName as NSString).pathExtension
-            dest = mastersDir.appendingPathComponent("\(stem)-\(counter).\(ext)")
-            counter += 1
+        let dest: URL
+        let imagePath: String
+        if referenced {
+            dest = source
+            imagePath = source.path            // absolute path marks our references
+        } else {
+            let mastersDir = libraryURL.appendingPathComponent("Masters").appendingPathComponent(datePath)
+            try fm.createDirectory(at: mastersDir, withIntermediateDirectories: true)
+            let baseName = fileName ?? source.lastPathComponent
+            var candidate = mastersDir.appendingPathComponent(baseName)
+            var counter = 1
+            while fm.fileExists(atPath: candidate.path) {
+                let stem = (baseName as NSString).deletingPathExtension
+                let ext = (baseName as NSString).pathExtension
+                candidate = mastersDir.appendingPathComponent("\(stem)-\(counter).\(ext)")
+                counter += 1
+            }
+            try fm.copyItem(at: source, to: candidate)
+            dest = candidate
+            imagePath = "\(datePath)/\(dest.lastPathComponent)"
         }
-        try fm.copyItem(at: source, to: dest)
-
-        let imagePath = "\(datePath)/\(dest.lastPathComponent)"
+        let baseName = fileName ?? source.lastPathComponent
         let size = ImageLoader.pixelSize(at: dest)
         let width = Int(size?.width ?? 0)
         let height = Int(size?.height ?? 0)
@@ -519,9 +528,10 @@ public final class ApertureLibraryWriter {
         try db.execute("""
             INSERT INTO RKMaster(modelId, uuid, name, projectUuid, fileName, originalFileName,
                 type, fileIsReference, isMissing, imagePath, fileSize, imageDate, createDate, isInTrash)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, 0)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, 0)
             """, [.integer(Int64(masterMid)), .text(masterUuid), .text(name), .text(projectUuid),
-                  .text(dest.lastPathComponent), .text(baseName), .text(mediaType), .text(imagePath),
+                  .text(dest.lastPathComponent), .text(baseName), .text(mediaType),
+                  .integer(referenced ? 1 : 0), .text(imagePath),
                   .integer(Int64(fileSize)), .real(appleDate), .real(appleDate)])
 
         let gps = ImageLoader.gpsCoordinate(at: dest)

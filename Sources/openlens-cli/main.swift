@@ -25,7 +25,8 @@ guard let libPath = args.first else {
       openlens-cli <library.aplibrary> --rate <versionUuid> <-1..5>
       openlens-cli <new.aplibrary> --create [projectName]
       openlens-cli <library.aplibrary> --new-project <name>
-      openlens-cli <library.aplibrary> --import <projectUuid> <file...>
+      openlens-cli <library.aplibrary> --import <projectUuid> <file...> [--referenced]
+      openlens-cli <library.aplibrary> --vault <destinationDir>
       openlens-cli <library.aplibrary> --duplicate <versionUuid>
       openlens-cli <library.aplibrary> --verify [--repair]
       openlens-cli <library.aplibrary> --duplicates
@@ -63,16 +64,28 @@ do {
     if args.contains("--import"), let i = args.firstIndex(of: "--import") {
         guard i + 1 < args.count else { fail("--import requires <projectUuid> <file...>") }
         let projectUuid = args[i + 1]
+        let referenced = args.contains("--referenced")
         let files = Array(args[(i + 2)...]).filter { !$0.hasPrefix("--") }
         guard !files.isEmpty else { fail("--import requires at least one file") }
         let writer = ApertureLibraryWriter(libraryURL: libURL, allowWrites: true)
         var ok = 0
         for f in files {
-            do { _ = try writer.importImage(at: URL(fileURLWithPath: f), intoProject: projectUuid); ok += 1 }
-            catch { print("  ⚠️  \(f): \(error)") }
+            do {
+                _ = try writer.importImage(at: URL(fileURLWithPath: f),
+                                           intoProject: projectUuid, referenced: referenced)
+                ok += 1
+            } catch { print("  ⚠️  \(f): \(error)") }
         }
-        print("Imported \(ok)/\(files.count) file(s) into \(projectUuid)")
+        print("Imported \(ok)/\(files.count) file(s) into \(projectUuid)\(referenced ? " (referenced)" : "")")
         exit(ok == files.count ? 0 : 1)
+    }
+
+    if args.contains("--vault"), let i = args.firstIndex(of: "--vault") {
+        guard i + 1 < args.count else { fail("--vault requires a destination directory") }
+        let (url, report) = try library.createVault(in: URL(fileURLWithPath: args[i + 1]))
+        print("Backup written: \(url.path)")
+        print(report.isHealthy ? "Backup verified ✓" : "⚠️ \(report.issues.count) issue(s) in backup")
+        exit(report.isHealthy ? 0 : 1)
     }
 
     if args.contains("--duplicate"), let i = args.firstIndex(of: "--duplicate") {

@@ -396,6 +396,14 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   Finder/trash-or-put-back), **filter-bar search matches keywords** too
   (preloaded keywordsByVersion map — no per-photo queries). + test.
 
+- **2026-07-23** **Referenced imports** ("keep files in place"): OpenLens
+  references store the ABSOLUTE path in `imagePath` + fileIsReference=1; reader
+  resolves absolute-path references (legacy Aperture alias blobs still not
+  decoded — those are skipped by the checker rather than flagged). "+" menu ▸
+  Import as Referenced…, CLI `--import ... --referenced`. **Vault backups**:
+  `createVault(in:)` copies the package + verifies the copy; File ▸ Back Up
+  Library…, CLI `--vault <dir>`. + tests for both.
+
 ### Current state (as of 2026-07-23)
 - ~95 tests, green in CI; near-complete Aperture parity for viewing/organizing,
   validated against a real 676MB library (babcia). Daniel is actively testing

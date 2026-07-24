@@ -32,6 +32,9 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .autoStackRequested)) { _ in
                 store.autoStack()
             }
+            .onReceive(NotificationCenter.default.publisher(for: .backupRequested)) { _ in
+                backupLibrary()
+            }
     }
 
     private var mainView: some View {
@@ -272,6 +275,8 @@ struct ContentView: View {
                 Divider()
                 Button("Import Photos…") { importPhotos() }
                     .disabled(store.projects.isEmpty)
+                Button("Import as Referenced (keep in place)…") { importPhotos(referenced: true) }
+                    .disabled(store.projects.isEmpty)
                 Button("Import Folder as Projects…") { importFolderTree() }
             } label: {
                 Label("New", systemImage: "plus")
@@ -347,7 +352,7 @@ struct ContentView: View {
         } catch { store.errorMessage = "Couldn't duplicate version: \(error)" }
     }
 
-    private func importPhotos() {
+    private func importPhotos(referenced: Bool = false) {
         guard let lib = store.library else { return }
         guard let projectUuid = store.selectedProjectID ?? store.projects.first?.id else {
             store.errorMessage = "Create or select a project first."
@@ -358,17 +363,45 @@ struct ContentView: View {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowedContentTypes = [.image]
-        panel.message = "Choose photos to import into the project"
+        panel.message = referenced
+            ? "Choose photos to import — files stay in their current location"
+            : "Choose photos to import into the project"
         guard panel.runModal() == .OK else { return }
         let writer = ApertureLibraryWriter(libraryURL: lib.url, allowWrites: true)
         var failed = 0
         for url in panel.urls {
-            do { _ = try writer.importImage(at: url, intoProject: projectUuid) }
+            do { _ = try writer.importImage(at: url, intoProject: projectUuid, referenced: referenced) }
             catch { failed += 1 }
         }
         store.reload()
         store.selectProject(projectUuid)
         if failed > 0 { store.errorMessage = "\(failed) file(s) couldn't be imported." }
+    }
+
+    private func backupLibrary() {
+        guard let lib = store.library else { return }
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.prompt = "Back Up Here"
+        panel.message = "Choose where to store the library backup (vault)"
+        guard panel.runModal() == .OK, let dest = panel.url else { return }
+        Task.detached {
+            do {
+                let (url, report) = try lib.createVault(in: dest)
+                await MainActor.run {
+                    let alert = NSAlert()
+                    alert.messageText = report.isHealthy ? "Backup complete" : "Backup completed with warnings"
+                    alert.informativeText = report.isHealthy
+                        ? "Verified backup at \(url.lastPathComponent)."
+                        : "\(report.issues.count) issue(s) found in the backup — see --verify."
+                    alert.runModal()
+                }
+            } catch {
+                await MainActor.run { store.errorMessage = "Backup failed: \(error)" }
+            }
+        }
     }
 
     private func importFolderTree() {
