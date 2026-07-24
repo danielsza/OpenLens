@@ -81,6 +81,13 @@ corrupted SQLite's heap. Fix: **open every connection with
   Also: real CR2 fixture committed (Tests/Fixtures/raw) + RAW decode CI test;
   full 244MB catalog copying to /tmp/biglib.apdb for at-scale validation.
 
+- **2026-07-24** **Re-editing legacy edits shipped**:
+  `OLAdjustments(approximating:)` maps decoded Aperture ops → our sliders
+  (EV direct; Kelvin→slider (6500−K)/30; tint direct; contrast −1…1 → 0.5…1.5;
+  H&S 0…100 → 0…1; crop/retouch skipped). "Re-edit in OpenLens" button loads
+  them; when OL params are active the viewer renders from the MASTER (not the
+  baked preview) to avoid double-applying. Mapping tested against real blobs.
+
 ## Hard-won format lessons (see also docs/aperture-format.md)
 1. **Dates** are seconds since 2001-01-01 (NSDate epoch), not Unix.
 2. **Ratings/flags/labels live in two places**: `RKVersion` *and* the

@@ -66,8 +66,18 @@ final class ImageCache {
         let params = adjustments ?? library.olAdjustments(for: photo)
         let k = key("\(photo.id)#\(rotation)#\(params?.cacheKey ?? "-")", 0)
         if let hit = cache.object(forKey: k) { return hit }
-        // Prefer Aperture's rendered preview (reflects its edits) over the master.
-        let url = library.viewerImageURL(for: photo)
+        // With OpenLens adjustments active, render from the MASTER so our
+        // params fully define the look (applying them over Aperture's baked
+        // preview would double-apply edits). Otherwise prefer the preview.
+        let url: URL
+        if params != nil {
+            let master = library.masterFileURL(for: photo.master)
+            url = FileManager.default.fileExists(atPath: master.path)
+                ? master
+                : library.viewerImageURL(for: photo)
+        } else {
+            url = library.viewerImageURL(for: photo)
+        }
         // Previews/thumbnails are already rotated by Aperture; only rotate masters.
         let applyRotation = (url == library.masterFileURL(for: photo.master)) ? rotation : 0
         let cg = await Task.detached(priority: .userInitiated) { () -> CGImage? in

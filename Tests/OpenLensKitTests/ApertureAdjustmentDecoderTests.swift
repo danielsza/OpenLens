@@ -43,6 +43,21 @@ final class ApertureAdjustmentDecoderTests: XCTestCase {
         XCTAssertFalse(op.displayParameters.contains { $0.name.contains("Constrain") })
     }
 
+    func testApproximatesRealEditsAsOLAdjustments() throws {
+        let exposure = try XCTUnwrap(ApertureAdjustmentDecoder.decode(uuid: "a", data: data(Self.exposureHex)))
+        let wb = try XCTUnwrap(ApertureAdjustmentDecoder.decode(uuid: "b", data: data(Self.wbHex)))
+        let crop = try XCTUnwrap(ApertureAdjustmentDecoder.decode(uuid: "c", data: data(Self.cropHex)))
+
+        let params = OLAdjustments(approximating: [exposure, wb, crop])
+        XCTAssertEqual(params.exposure, 1.6205673758865249, accuracy: 0.0001)
+        // Kelvin 5283.66 → slider (6500 − K)/30 ≈ 40.54
+        XCTAssertEqual(params.temperature, (6500 - 5283.661412244267) / 30, accuracy: 0.01)
+        XCTAssertEqual(params.tint, -14.6688524009962, accuracy: 0.001)
+        // Crop has no OL equivalent — everything else stays neutral.
+        XCTAssertEqual(params.contrast, 1, accuracy: 0.0001)
+        XCTAssertFalse(params.isIdentity)
+    }
+
     func testGarbageDataReturnsNil() {
         XCTAssertNil(ApertureAdjustmentDecoder.decode(uuid: "x", data: Data([0, 1, 2, 3])))
     }

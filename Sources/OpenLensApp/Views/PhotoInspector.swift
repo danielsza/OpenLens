@@ -230,7 +230,14 @@ struct AdjustmentsInspector: View {
                             }
                             .padding(.vertical, 2)
                         }
-                        Text("Displayed via Aperture's rendered preview.")
+                        Button {
+                            store.editParams = OLAdjustments(approximating: apertureOps)
+                            store.previewAdjustments(store.editParams)
+                        } label: {
+                            Label("Re-edit in OpenLens", systemImage: "wand.and.rays")
+                        }
+                        .help("Loads these Aperture edits into the sliders above (rendered live from the original) so you can tweak and save them.")
+                        Text("Aperture's original edits stay untouched; saving stores an OpenLens adjustment alongside them.")
                             .font(.caption2).foregroundStyle(.secondary)
                     }
                 }
