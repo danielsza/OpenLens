@@ -37,6 +37,18 @@ metadata, keywords, stacks, and (eventually) adjustments. See `README.md` and
   and the per-image `.apversion` plist in sync where both store the value.
 - Tests that mutate **always operate on a temp copy** of the library.
 
+## At-scale decoder validation (2026-07-24, run remotely on the Mac Mini)
+Python mirror of `ApertureAdjustmentDecoder` run over the ENTIRE real library:
+**18,719 / 18,719 blobs decoded, zero failures.** Correction to the earlier
+sample: 16,981 `RKRawDecodeOperation` rows DO carry Raw Fine Tuning params —
+keys: `inputBoostAmount` / `inputBoostPreserveHueAmount` (≈ CIRAWFilter
+`boostAmount` / `boostShadowAmount`), `inputSharpenIntensity` /
+`inputSharpenEdgeIntensity`, `inputChromaBlur*` (incl. moiré), `inputMethodVersion`.
+→ Next feature: map these onto `CIRAWFilter` for real Raw Fine Tuning.
+Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
+`/Volumes/8TB/imac 09.2024/apeture/Aperture Library.aplibrary` (sqlite via
+`file:…?immutable=1`; remote /usr/bin/python3 3.9 available for validation runs).
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)
