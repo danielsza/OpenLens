@@ -54,6 +54,18 @@ struct ContentView: View {
                 ContentUnavailablePlaceholder(action: openLibrary)
             }
         }
+        .overlay(alignment: .bottom) {
+            if let progress = store.importProgress {
+                HStack(spacing: 10) {
+                    ProgressView().controlSize(.small)
+                    Text(progress).font(.caption).lineLimit(1)
+                }
+                .padding(.horizontal, 16).padding(.vertical, 10)
+                .background(.ultraThinMaterial, in: Capsule())
+                .shadow(radius: 6)
+                .padding(.bottom, 60)
+            }
+        }
     }
 
     /// Notification handlers + the error alert, hung off a trivial base view so
@@ -411,15 +423,27 @@ struct ContentView: View {
         panel.canChooseFiles = false
         panel.message = "Choose a folder — each subfolder with images becomes a project"
         guard panel.runModal() == .OK, let root = panel.url else { return }
-        let writer = ApertureLibraryWriter(libraryURL: lib.url, allowWrites: true)
-        do {
-            let result = try writer.importFolderTree(at: root)
-            store.reload()
-            if result.photosImported == 0 {
-                store.errorMessage = "No images found in \(root.lastPathComponent)."
+        let libURL = lib.url
+        store.importProgress = "Scanning \(root.lastPathComponent)…"
+        Task.detached(priority: .userInitiated) {
+            let writer = ApertureLibraryWriter(libraryURL: libURL, allowWrites: true)
+            do {
+                let result = try writer.importFolderTree(at: root) { message in
+                    Task { @MainActor in store.importProgress = message }
+                }
+                await MainActor.run {
+                    store.importProgress = nil
+                    store.reload()
+                    if result.photosImported == 0 {
+                        store.errorMessage = "No images found in \(root.lastPathComponent)."
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    store.importProgress = nil
+                    store.errorMessage = "Folder import failed: \(error)"
+                }
             }
-        } catch {
-            store.errorMessage = "Folder import failed: \(error)"
         }
     }
 

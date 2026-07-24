@@ -211,6 +211,8 @@ final class LibraryStore: ObservableObject {
     @Published var showAdjustmentsHUD = false
     /// Full-screen editing mode: hides the left panel and chrome (F key).
     @Published var fullScreenMode = false
+    /// Non-nil while a long import runs; shown as a progress HUD.
+    @Published var importProgress: String?
 
     /// The values currently being edited (shared by the inspector tab and the
     /// HUD so they stay in sync) and their last-saved baseline.

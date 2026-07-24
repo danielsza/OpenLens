@@ -59,6 +59,12 @@ final class ExporterTests: XCTestCase {
         XCTAssertEqual(png.pathExtension, "png")
         XCTAssertTrue(ImageLoader.canDecode(png))
 
+        // HEIC.
+        let heic = try exporter.export(photo, to: dir,
+            settings: ExportSettings(format: .heic, maxPixelSize: 100, jpegQuality: 0.8))
+        XCTAssertEqual(heic.pathExtension, "heic")
+        XCTAssertTrue(ImageLoader.canDecode(heic))
+
         // JPEG with a text watermark + DPI.
         let jpg = try exporter.export(photo, to: dir,
             settings: ExportSettings(format: .jpeg, maxPixelSize: 200, jpegQuality: 0.8,

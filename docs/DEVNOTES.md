@@ -404,6 +404,9 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   `createVault(in:)` copies the package + verifies the copy; File ▸ Back Up
   Library…, CLI `--vault <dir>`. + tests for both.
 
+- **2026-07-24** v0.1.5 batch: folder-import runs in the background with a
+  progress HUD (capsule overlay); **HEIC export** (quality slider applies).
+
 ### Current state (as of 2026-07-23)
 - ~95 tests, green in CI; near-complete Aperture parity for viewing/organizing,
   validated against a real 676MB library (babcia). Daniel is actively testing

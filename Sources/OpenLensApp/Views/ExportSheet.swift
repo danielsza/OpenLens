@@ -47,6 +47,7 @@ struct ExportSheet: View {
                     Text("JPEG").tag(ExportSettings.Format.jpeg)
                     Text("PNG").tag(ExportSettings.Format.png)
                     Text("TIFF").tag(ExportSettings.Format.tiff)
+                    Text("HEIC").tag(ExportSettings.Format.heic)
                 }
 
                 if format != .originals {
@@ -65,7 +66,7 @@ struct ExportSheet: View {
                             Text("px").foregroundStyle(.secondary)
                         }
                     }
-                    if format == .jpeg {
+                    if format == .jpeg || format == .heic {
                         HStack {
                             Text("Quality")
                             Slider(value: $quality, in: 0.3...1.0)

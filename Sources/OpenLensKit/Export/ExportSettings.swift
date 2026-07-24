@@ -5,7 +5,7 @@ import CoreText
 
 /// Aperture-style export options: format, size, resolution, quality, watermark.
 public struct ExportSettings {
-    public enum Format: String, CaseIterable { case originals, jpeg, png, tiff }
+    public enum Format: String, CaseIterable { case originals, jpeg, png, tiff, heic }
 
     public var format: Format = .jpeg
     /// Long-edge cap in pixels; 0 = full resolution.
@@ -37,6 +37,7 @@ public struct ExportSettings {
         case .jpeg: return "jpg"
         case .png: return "png"
         case .tiff: return "tiff"
+        case .heic: return "heic"
         }
     }
 
@@ -44,9 +45,13 @@ public struct ExportSettings {
         switch format {
         case .png: return "public.png" as CFString
         case .tiff: return "public.tiff" as CFString
+        case .heic: return "public.heic" as CFString
         default: return "public.jpeg" as CFString
         }
     }
+
+    /// Formats that honour the lossy-quality setting.
+    var isLossy: Bool { format == .jpeg || format == .heic }
 }
 
 /// A text or image watermark drawn onto exported (rendered) images.
@@ -151,7 +156,7 @@ public extension Exporter {
             return false
         }
         var props: [CFString: Any] = sourceMetadata
-        if settings.format == .jpeg {
+        if settings.isLossy {
             props[kCGImageDestinationLossyCompressionQuality] = max(0, min(1, settings.jpegQuality))
         }
         if let dpi = settings.dpi {
