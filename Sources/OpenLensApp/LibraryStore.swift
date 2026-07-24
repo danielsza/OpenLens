@@ -53,6 +53,12 @@ final class LibraryStore: ObservableObject {
         min(max(CGFloat(thumbnailSize) * 0.7, 64), 170)
     }
 
+    /// When the user clicks the big viewer image it becomes "focused": the
+    /// size slider then zooms the image instead of resizing thumbnails.
+    @Published var viewerFocused = false
+    /// Viewer zoom: 1 = fit, up to 8×.
+    @Published var viewerZoom = 1.0
+
     @Published var filter = PhotoFilter()
     @Published var sort: PhotoSort = .date
     @Published var sortAscending = true
@@ -170,8 +176,9 @@ final class LibraryStore: ObservableObject {
 
     /// Handles a thumbnail click with optional Command (toggle) / Shift (range).
     func handleTap(_ photo: Photo, command: Bool, shift: Bool) {
+        viewerFocused = false          // thumbnail interaction: slider sizes thumbs
         let changed = photo.id != selectedPhotoID
-        if changed { liveAdjustments = nil }
+        if changed { liveAdjustments = nil; viewerZoom = 1 }
         defer { if changed { syncEditParams() } }
         if command {
             if selectedPhotoIDs.contains(photo.id) { selectedPhotoIDs.remove(photo.id) }

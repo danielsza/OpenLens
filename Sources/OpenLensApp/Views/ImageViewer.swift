@@ -13,6 +13,9 @@ struct ImageViewer: View {
     @State private var showFaces = false
     @State private var faces: [DetectedFace] = []
     @State private var hover: CGPoint?
+    @State private var pan: CGSize = .zero
+    @State private var panBase: CGSize = .zero
+    @State private var lastPhotoID: String?
 
     private let loupeDiameter: CGFloat = 180
     /// Aperture offered 50%–1600%; step through with = / - while the loupe is on.
@@ -91,6 +94,53 @@ struct ImageViewer: View {
 
     @ViewBuilder
     private func viewerBody(_ image: NSImage) -> some View {
+        if store.viewerZoom > 1.01 {
+            zoomedBody(image)
+        } else {
+            fitBody(image)
+        }
+    }
+
+    /// Zoomed-in view: drag to pan, double-click to reset to fit.
+    private func zoomedBody(_ image: NSImage) -> some View {
+        GeometryReader { geo in
+            ZStack {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .scaleEffect(store.viewerZoom)
+                    .offset(pan)
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+            .clipped()
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture()
+                    .onChanged { value in
+                        pan = CGSize(width: panBase.width + value.translation.width,
+                                     height: panBase.height + value.translation.height)
+                    }
+                    .onEnded { _ in panBase = pan }
+            )
+            .onTapGesture(count: 2) {
+                store.viewerZoom = 1
+                pan = .zero; panBase = .zero
+            }
+            .overlay(alignment: .topTrailing) {
+                Text(String(format: "%.0f%%", store.viewerZoom * 100))
+                    .font(.caption2).monospacedDigit()
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(.black.opacity(0.6), in: Capsule())
+                    .foregroundStyle(.white)
+                    .padding(10)
+            }
+        }
+        .padding(16)
+    }
+
+    @ViewBuilder
+    private func fitBody(_ image: NSImage) -> some View {
         GeometryReader { geo in
             let fitted = fittedRect(imageSize: image.size, in: geo.size)
             ZStack(alignment: .topLeading) {
@@ -113,9 +163,15 @@ struct ImageViewer: View {
                         case .ended: hover = nil
                         }
                     }
+                    .onTapGesture {
+                        // Focus the viewer: the size slider now zooms this image.
+                        store.viewerFocused = true
+                    }
 
                 Rectangle()
-                    .strokeBorder(Color.white.opacity(0.18), lineWidth: 1)
+                    .strokeBorder(store.viewerFocused ? Color.accentColor.opacity(0.8)
+                                                      : Color.white.opacity(0.18),
+                                  lineWidth: store.viewerFocused ? 2 : 1)
                     .frame(width: fitted.width + 2, height: fitted.height + 2)
                     .position(x: fitted.midX, y: fitted.midY)
                     .allowsHitTesting(false)
@@ -196,6 +252,10 @@ struct ImageViewer: View {
         player?.pause()
         player = nil
         guard let lib = store.library, let photo = store.selectedPhoto else { return }
+        if photo.id != lastPhotoID {
+            lastPhotoID = photo.id
+            pan = .zero; panBase = .zero
+        }
         if photo.master.isVideo {
             let url = lib.masterFileURL(for: photo.master)
             if FileManager.default.fileExists(atPath: url.path) {

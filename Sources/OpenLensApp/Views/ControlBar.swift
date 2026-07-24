@@ -32,14 +32,27 @@ struct ControlBar: View {
                 .buttonStyle(.plain)
                 .help("Adjustments HUD (H)")
 
-                HStack(spacing: 6) {
-                    Image(systemName: "photo").font(.system(size: 9))
-                        .foregroundStyle(Theme.textSecondary)
-                    Slider(value: $store.thumbnailSize, in: 90...320)
-                        .frame(width: 120)
-                        .help("Thumbnail size (grid and filmstrip)")
-                    Image(systemName: "photo").font(.system(size: 14))
-                        .foregroundStyle(Theme.textSecondary)
+                if store.viewerFocused && store.selectedPhoto != nil {
+                    // Viewer is focused: the slider zooms the big image.
+                    HStack(spacing: 6) {
+                        Image(systemName: "minus.magnifyingglass").font(.system(size: 11))
+                            .foregroundStyle(Color.accentColor)
+                        Slider(value: $store.viewerZoom, in: 1...8)
+                            .frame(width: 120)
+                            .help("Zoom the selected image (double-click image to reset)")
+                        Image(systemName: "plus.magnifyingglass").font(.system(size: 13))
+                            .foregroundStyle(Color.accentColor)
+                    }
+                } else {
+                    HStack(spacing: 6) {
+                        Image(systemName: "photo").font(.system(size: 9))
+                            .foregroundStyle(Theme.textSecondary)
+                        Slider(value: $store.thumbnailSize, in: 90...320)
+                            .frame(width: 120)
+                            .help("Thumbnail size (grid and filmstrip) — click the big image to zoom it instead")
+                        Image(systemName: "photo").font(.system(size: 14))
+                            .foregroundStyle(Theme.textSecondary)
+                    }
                 }
             }
 

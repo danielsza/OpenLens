@@ -9,20 +9,26 @@ struct RGBHistogramView: View {
         GeometryReader { geo in
             if let h = histogram {
                 let maxV = max(h.red.max() ?? 1, h.green.max() ?? 1, h.blue.max() ?? 1, 1)
+                // True additive blending PER CHANNEL (pure primaries on black):
+                // one channel = pure colour, two = secondary, all three = white,
+                // exactly like Aperture's histogram.
                 ZStack {
-                    channel(h.red, Color(red: 0.95, green: 0.2, blue: 0.2), maxV, geo.size)
-                    channel(h.green, Color(red: 0.2, green: 0.9, blue: 0.3), maxV, geo.size)
-                    channel(h.blue, Color(red: 0.25, green: 0.45, blue: 1.0), maxV, geo.size)
+                    channel(h.red, Color(red: 1, green: 0, blue: 0), maxV, geo.size)
+                        .blendMode(.plusLighter)
+                    channel(h.green, Color(red: 0, green: 1, blue: 0), maxV, geo.size)
+                        .blendMode(.plusLighter)
+                    channel(h.blue, Color(red: 0, green: 0, blue: 1), maxV, geo.size)
+                        .blendMode(.plusLighter)
                 }
-                .blendMode(.screen)
+                .compositingGroup()
             } else {
                 Text("—").foregroundStyle(Color.white.opacity(0.4))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .background(Color(white: 0.09))
+        .background(Color.black)
         .clipShape(RoundedRectangle(cornerRadius: 5))
-        .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color.black.opacity(0.35)))
+        .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color.black.opacity(0.5)))
     }
 
     private func channel(_ values: [Int], _ color: Color, _ maxV: Int, _ size: CGSize) -> some View {
@@ -37,7 +43,7 @@ struct RGBHistogramView: View {
             path.addLine(to: CGPoint(x: size.width, y: size.height))
             path.closeSubpath()
         }
-        .fill(color.opacity(0.65))
+        .fill(color)
     }
 }
 

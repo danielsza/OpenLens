@@ -61,6 +61,13 @@ corrupted SQLite's heap. Fix: **open every connection with
   Aperture-style **hover scrubber** — a mini slider fades in over the strip on
   hover for jumping anywhere (only when >8 photos).
 
+- **2026-07-24** Histogram fixed properly: blend mode must be applied **per
+  channel** (container blendMode just alpha-stacks → pastel patchwork). Pure
+  primaries + plusLighter on black = Aperture look. **Viewer focus + zoom**:
+  clicking the canvas image focuses it (accent frame) and the control-bar
+  slider becomes a 1–8× zoom (drag to pan, double-click resets); clicking any
+  thumbnail returns the slider to thumbnail-size mode.
+
 ## Hard-won format lessons (see also docs/aperture-format.md)
 1. **Dates** are seconds since 2001-01-01 (NSDate epoch), not Unix.
 2. **Ratings/flags/labels live in two places**: `RKVersion` *and* the
