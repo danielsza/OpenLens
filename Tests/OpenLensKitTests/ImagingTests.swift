@@ -32,7 +32,7 @@ final class ImagingTests: XCTestCase {
         let lib = try openTestLibrary()
         let photo = try XCTUnwrap(try lib.photos().first)
         let h = try XCTUnwrap(ImageLoader.histogram(at: lib.masterFileURL(for: photo.master)))
-        XCTAssertEqual(h.bucketCount, 64)
+        XCTAssertEqual(h.bucketCount, 128)
         let sR = h.red.reduce(0, +), sL = h.luminance.reduce(0, +)
         XCTAssertGreaterThan(sL, 0)
         XCTAssertEqual(sR, sL)   // same pixel count across channels

@@ -32,18 +32,38 @@ struct RGBHistogramView: View {
     }
 
     private func channel(_ values: [Int], _ color: Color, _ maxV: Int, _ size: CGSize) -> some View {
-        Path { path in
-            guard !values.isEmpty else { return }
-            let step = size.width / CGFloat(values.count)
+        let smoothed = Self.smooth(values)
+        return Path { path in
+            guard !smoothed.isEmpty else { return }
+            let step = size.width / CGFloat(smoothed.count - 1)
             path.move(to: CGPoint(x: 0, y: size.height))
-            for (i, v) in values.enumerated() {
-                let y = size.height * (1 - CGFloat(v) / CGFloat(maxV))
+            for (i, v) in smoothed.enumerated() {
+                // Power-compress peaks so the shape fills out like Aperture's
+                // rather than a few needle spikes dominating.
+                let norm = pow(min(1, v / Double(maxV)), 0.6)
+                let y = size.height * (1 - CGFloat(norm))
                 path.addLine(to: CGPoint(x: CGFloat(i) * step, y: y))
             }
             path.addLine(to: CGPoint(x: size.width, y: size.height))
             path.closeSubpath()
         }
-        .fill(color)
+        .fill(color.opacity(0.9))
+    }
+
+    /// 5-tap weighted moving average — smooths bucket noise into clean curves.
+    private static func smooth(_ values: [Int]) -> [Double] {
+        guard values.count > 4 else { return values.map(Double.init) }
+        let w: [Double] = [1, 2, 3, 2, 1]
+        return values.indices.map { i in
+            var total = 0.0, weight = 0.0
+            for (k, wk) in w.enumerated() {
+                let j = i + k - 2
+                guard values.indices.contains(j) else { continue }
+                total += Double(values[j]) * wk
+                weight += wk
+            }
+            return total / max(weight, 1)
+        }
     }
 }
 

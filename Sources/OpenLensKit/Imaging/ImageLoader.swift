@@ -128,7 +128,7 @@ public enum ImageLoader {
     }
 
     /// Computes a histogram by sampling a downsampled copy of the image.
-    public static func histogram(at url: URL, sampleMax: Int = 160, buckets: Int = 64) -> Histogram? {
+    public static func histogram(at url: URL, sampleMax: Int = 200, buckets: Int = 128) -> Histogram? {
         guard let cg = cgImage(at: url, maxPixelSize: sampleMax) else { return nil }
         let w = cg.width, h = cg.height
         guard w > 0, h > 0 else { return nil }
