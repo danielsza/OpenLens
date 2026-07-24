@@ -125,7 +125,9 @@ public final class ApertureLibraryWriter {
                 for photo in photosByName[name] ?? [] {
                     let masterURL = library.masterFileURL(for: photo.master)
                     guard FileManager.default.fileExists(atPath: masterURL.path) else { continue }
-                    let datePath = (photo.master.imagePath as NSString).deletingLastPathComponent
+                    let datePath = photo.master.imagePath.hasPrefix("/")
+                        ? "Referenced"
+                        : (photo.master.imagePath as NSString).deletingLastPathComponent
                     try? writeImportDerivatives(masterURL: masterURL, masterUuid: photo.master.id,
                                                 versionUuid: photo.version.id, name: photo.version.name,
                                                 projectUuid: photo.version.projectUuid, datePath: datePath)
@@ -553,9 +555,13 @@ public final class ApertureLibraryWriter {
 
         // Best-effort: generate a cached thumbnail + a Version-1.apversion plist
         // (EXIF + proxy paths) so imported photos browse fast and show metadata.
+        // Referenced masters keep their derivatives under a canonical
+        // "Referenced" path (their imagePath is absolute, so no date path can
+        // be derived from it on the read side).
+        let derivativesPath = referenced ? "Referenced" : datePath
         try? writeImportDerivatives(masterURL: dest, masterUuid: masterUuid,
                                     versionUuid: versionUuid, name: name,
-                                    projectUuid: projectUuid, datePath: datePath)
+                                    projectUuid: projectUuid, datePath: derivativesPath)
         return versionUuid
     }
 
@@ -843,7 +849,11 @@ public final class ApertureLibraryWriter {
         // imagePath looks like "2026/06/16/20260616-214247/F30A1132.JPG".
         // The version plists live under Database/Versions/<same date path>/
         // <masterUuid>/Version-N.apversion. We search that date folder.
-        let datePath = (imagePath as NSString).deletingLastPathComponent
+        // Referenced masters (absolute imagePath) keep theirs under
+        // Database/Versions/Referenced/.
+        let datePath = imagePath.hasPrefix("/")
+            ? "Referenced"
+            : (imagePath as NSString).deletingLastPathComponent
         let searchDir = libraryURL
             .appendingPathComponent("Database/Versions")
             .appendingPathComponent(datePath)

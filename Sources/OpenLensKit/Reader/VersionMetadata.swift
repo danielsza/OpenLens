@@ -64,7 +64,11 @@ public extension ApertureLibrary {
     /// `Database/Versions/<date>/<masterUuid>/Version-N.apversion`, where the
     /// date path comes from the master's `imagePath`.
     func versionPlistURL(for photo: Photo) -> URL? {
-        let datePath = (photo.master.imagePath as NSString).deletingLastPathComponent
+        // Referenced masters (absolute imagePath) keep derivatives under
+        // "Referenced/"; managed masters use their date path.
+        let datePath = photo.master.imagePath.hasPrefix("/")
+            ? "Referenced"
+            : (photo.master.imagePath as NSString).deletingLastPathComponent
         let dir = versionsURL
             .appendingPathComponent(datePath)
             .appendingPathComponent(photo.master.id)
