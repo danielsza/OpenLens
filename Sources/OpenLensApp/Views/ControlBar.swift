@@ -39,6 +39,8 @@ struct ControlBar: View {
                 .buttonStyle(.plain)
                 .help("Flag")
 
+                Divider().frame(height: 14)
+
                 // Colour labels
                 HStack(spacing: 5) {
                     ForEach([ColorLabel.none, .red, .orange, .yellow, .green, .blue, .purple, .gray], id: \.rawValue) { label in
@@ -57,9 +59,12 @@ struct ControlBar: View {
                     }
                 }
 
+                Divider().frame(height: 14)
+
                 Text(photo.version.name)
                     .font(.caption)
                     .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
             } else {
                 Text("No selection").foregroundStyle(Theme.textSecondary).font(.caption)
             }
@@ -80,8 +85,9 @@ struct ControlBar: View {
             Slider(value: $store.thumbnailSize, in: 90...320).frame(width: 130)
             Image(systemName: "photo").font(.system(size: 14)).foregroundStyle(Theme.textSecondary)
         }
+        .controlSize(.small)
         .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .padding(.vertical, 7)
         .background(Theme.panel)
     }
 }

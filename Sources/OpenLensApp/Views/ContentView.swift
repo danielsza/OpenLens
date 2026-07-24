@@ -204,7 +204,7 @@ struct ContentView: View {
         case .split:
             VSplitView {
                 ImageViewer(store: store).frame(minHeight: 200)
-                Filmstrip(store: store).frame(height: 150)
+                Filmstrip(store: store).frame(height: 118)
             }
         case .viewer:
             ImageViewer(store: store)
@@ -252,7 +252,8 @@ struct ContentView: View {
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
         }
-        .padding(.horizontal, 12).padding(.vertical, 6)
+        .controlSize(.small)
+        .padding(.horizontal, 12).padding(.vertical, 5)
         .background(Theme.panel)
     }
 

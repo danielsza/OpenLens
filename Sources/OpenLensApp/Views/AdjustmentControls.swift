@@ -10,18 +10,19 @@ struct RGBHistogramView: View {
             if let h = histogram {
                 let maxV = max(h.red.max() ?? 1, h.green.max() ?? 1, h.blue.max() ?? 1, 1)
                 ZStack {
-                    channel(h.red, .red, maxV, geo.size)
-                    channel(h.green, .green, maxV, geo.size)
-                    channel(h.blue, .blue, maxV, geo.size)
+                    channel(h.red, Color(red: 0.95, green: 0.2, blue: 0.2), maxV, geo.size)
+                    channel(h.green, Color(red: 0.2, green: 0.9, blue: 0.3), maxV, geo.size)
+                    channel(h.blue, Color(red: 0.25, green: 0.45, blue: 1.0), maxV, geo.size)
                 }
-                .blendMode(.plusLighter)
+                .blendMode(.screen)
             } else {
-                Text("—").foregroundStyle(.secondary)
+                Text("—").foregroundStyle(Color.white.opacity(0.4))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .background(Color.black.opacity(0.75))
-        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .background(Color(white: 0.09))
+        .clipShape(RoundedRectangle(cornerRadius: 5))
+        .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color.black.opacity(0.35)))
     }
 
     private func channel(_ values: [Int], _ color: Color, _ maxV: Int, _ size: CGSize) -> some View {
@@ -36,7 +37,7 @@ struct RGBHistogramView: View {
             path.addLine(to: CGPoint(x: size.width, y: size.height))
             path.closeSubpath()
         }
-        .fill(color.opacity(0.55))
+        .fill(color.opacity(0.65))
     }
 }
 
@@ -111,16 +112,17 @@ struct AdjustmentControls: View {
         HStack(spacing: 6) {
             Text(label)
                 .font(.caption2)
-                .frame(width: compact ? 56 : 66, alignment: .leading)
+                .frame(width: compact ? 54 : 62, alignment: .leading)
             Slider(value: Binding(
                 get: { store.editParams[keyPath: keyPath] },
                 set: { store.editParams[keyPath: keyPath] = $0
                        store.previewAdjustments(store.editParams) }
             ), in: range)
+            .controlSize(.mini)
             Text(String(format: "%.2f", store.editParams[keyPath: keyPath]))
                 .font(.caption2).monospacedDigit()
                 .foregroundStyle(.secondary)
-                .frame(width: 38, alignment: .trailing)
+                .frame(width: 32, alignment: .trailing)
         }
     }
 }

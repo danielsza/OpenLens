@@ -44,6 +44,11 @@ corrupted SQLite's heap. Fix: **open every connection with
 `SQLITE_OPEN_FULLMUTEX`** (serialized mode) + cache `tableExists`. A
 `concurrentPerform` regression test hammers a shared connection in CI.
 
+- **2026-07-24** Polish pass from Daniel's screenshot: dark saturated RGB
+  histogram (screen blend on near-black, hairline border), mini/small control
+  sizes across filter bar + control bar + sliders, filmstrip pane height
+  matched to content (kills grey banding), control-bar group dividers.
+
 ## Hard-won format lessons (see also docs/aperture-format.md)
 1. **Dates** are seconds since 2001-01-01 (NSDate epoch), not Unix.
 2. **Ratings/flags/labels live in two places**: `RKVersion` *and* the
