@@ -46,8 +46,17 @@ public extension OLAdjustments {
                 if let h = p["inputHighlightAmount"] {
                     highlights = min(1, max(0, h / 100))
                 }
+            case "RKCropOperation":
+                if let x = p["inputXOrigin"], let y = p["inputYOrigin"],
+                   let w = p["inputWidth"], let h = p["inputHeight"], w > 0, h > 0 {
+                    cropX = x; cropY = y; cropWidth = w; cropHeight = h
+                }
+            case "RKStraightenCropOperation":
+                if let angle = p["inputRotation"] {
+                    straighten = min(45, max(-45, angle))
+                }
             default:
-                break   // crop/straighten/retouch/etc. — not representable yet
+                break   // retouch/levels/vignette/etc. — not representable yet
             }
         }
     }

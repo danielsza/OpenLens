@@ -49,6 +49,15 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
 `/Volumes/8TB/imac 09.2024/apeture/Aperture Library.aplibrary` (sqlite via
 `file:…?immutable=1`; remote /usr/bin/python3 3.9 available for validation runs).
 
+- **2026-07-24** Crop + straighten support: OLAdjustments gains
+  straighten/cropX/Y/W/H (custom tolerant `init(from:)` so old JSON decodes;
+  ANY future field additions must use decodeIfPresent there). Renderer applies
+  geometry FIRST (rotate about centre, crop, re-origin); crop coords are
+  MASTER-space bottom-left (CI convention, believed to match Aperture —
+  visually verify on a real cropped photo) and scale by renderedWidth/master
+  Width via new `masterPixelSize` param (passed by viewer/export/thumbnails).
+  Import maps RKCropOperation + RKStraightenCropOperation (inputRotation °).
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)

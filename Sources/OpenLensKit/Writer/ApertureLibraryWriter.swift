@@ -258,7 +258,10 @@ public final class ApertureLibraryWriter {
                                                      withIntermediateDirectories: true)
             let maxPixel = key == "thumbnailPath" ? 1024 : 360
             guard var cg = ImageLoader.cgImage(at: masterURL, maxPixelSize: maxPixel) else { continue }
-            if let adjustments { cg = AdjustmentRenderer.apply(adjustments, to: cg) }
+            if let adjustments {
+                let masterSize = ImageLoader.pixelSize(at: masterURL)
+                cg = AdjustmentRenderer.apply(adjustments, to: cg, masterPixelSize: masterSize)
+            }
             if rotation != 0 { cg = ImageLoader.rotate(cg, degrees: rotation) }
             if let out = CGImageDestinationCreateWithURL(dest as CFURL, "public.jpeg" as CFString, 1, nil) {
                 CGImageDestinationAddImage(out, cg, [kCGImageDestinationLossyCompressionQuality: 0.85] as CFDictionary)

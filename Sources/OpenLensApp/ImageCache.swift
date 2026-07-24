@@ -80,9 +80,16 @@ final class ImageCache {
         }
         // Previews/thumbnails are already rotated by Aperture; only rotate masters.
         let applyRotation = (url == library.masterFileURL(for: photo.master)) ? rotation : 0
+        let masterSize: CGSize? = {
+            guard let w = photo.version.masterWidth, let h = photo.version.masterHeight,
+                  w > 0, h > 0 else { return nil }
+            return CGSize(width: w, height: h)
+        }()
         let cg = await Task.detached(priority: .userInitiated) { () -> CGImage? in
             guard var base = ImageLoader.cgImage(at: url, maxPixelSize: 2400) else { return nil }
-            if let params { base = AdjustmentRenderer.apply(params, to: base) }
+            if let params {
+                base = AdjustmentRenderer.apply(params, to: base, masterPixelSize: masterSize)
+            }
             return ImageLoader.rotate(base, degrees: applyRotation)
         }.value
         guard let cg else { return nil }

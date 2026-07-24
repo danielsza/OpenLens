@@ -14,8 +14,38 @@ public struct OLAdjustments: Codable, Equatable {
     public var highlights: Double = 0    // -1...+1
     public var shadows: Double = 0       // -1...+1
     public var sharpness: Double = 0     // 0...1
+    /// Straighten angle in degrees (positive = counter-clockwise), like
+    /// Aperture's `inputRotation`.
+    public var straighten: Double = 0    // -45...+45
+    /// Crop rectangle in MASTER pixel coordinates, bottom-left origin
+    /// (Aperture/Core Image convention). Width/height 0 = no crop.
+    public var cropX: Double = 0
+    public var cropY: Double = 0
+    public var cropWidth: Double = 0
+    public var cropHeight: Double = 0
+
+    public var hasCrop: Bool { cropWidth > 0 && cropHeight > 0 }
 
     public init() {}
+
+    /// Tolerant decoding: fields added over time default to neutral so blobs
+    /// saved by older OpenLens versions still load.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        exposure = try c.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
+        contrast = try c.decodeIfPresent(Double.self, forKey: .contrast) ?? 1
+        saturation = try c.decodeIfPresent(Double.self, forKey: .saturation) ?? 1
+        temperature = try c.decodeIfPresent(Double.self, forKey: .temperature) ?? 0
+        tint = try c.decodeIfPresent(Double.self, forKey: .tint) ?? 0
+        highlights = try c.decodeIfPresent(Double.self, forKey: .highlights) ?? 0
+        shadows = try c.decodeIfPresent(Double.self, forKey: .shadows) ?? 0
+        sharpness = try c.decodeIfPresent(Double.self, forKey: .sharpness) ?? 0
+        straighten = try c.decodeIfPresent(Double.self, forKey: .straighten) ?? 0
+        cropX = try c.decodeIfPresent(Double.self, forKey: .cropX) ?? 0
+        cropY = try c.decodeIfPresent(Double.self, forKey: .cropY) ?? 0
+        cropWidth = try c.decodeIfPresent(Double.self, forKey: .cropWidth) ?? 0
+        cropHeight = try c.decodeIfPresent(Double.self, forKey: .cropHeight) ?? 0
+    }
 
     /// True when every parameter is at its neutral value.
     public var isIdentity: Bool { self == OLAdjustments() }

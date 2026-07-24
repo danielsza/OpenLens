@@ -9,9 +9,38 @@ public enum AdjustmentRenderer {
 
     /// Applies the parameters to a CGImage. Returns the input unchanged when
     /// the parameters are neutral or rendering fails.
-    public static func apply(_ params: OLAdjustments, to cg: CGImage) -> CGImage {
+    ///
+    /// `masterPixelSize`: the ORIGINAL master's pixel dimensions. Crop
+    /// coordinates are stored in master space; when rendering a downsampled
+    /// image they are scaled by `cg.width / masterWidth`. Pass nil when `cg`
+    /// is the full-resolution master (scale 1).
+    public static func apply(_ params: OLAdjustments, to cg: CGImage,
+                             masterPixelSize: CGSize? = nil) -> CGImage {
         guard !params.isIdentity else { return cg }
         var image = CIImage(cgImage: cg)
+
+        // Geometry first (straighten around the centre, then crop), so colour
+        // work runs on the final pixels only.
+        if params.straighten != 0 {
+            let radians = params.straighten * .pi / 180
+            let extent = image.extent
+            let rotate = CGAffineTransform(translationX: extent.midX, y: extent.midY)
+                .rotated(by: radians)
+                .translatedBy(x: -extent.midX, y: -extent.midY)
+            image = image.transformed(by: rotate).cropped(to: extent)
+        }
+        if params.hasCrop {
+            let scale = masterPixelSize.map { Double(cg.width) / max(1, $0.width) } ?? 1
+            let rect = CGRect(x: params.cropX * scale, y: params.cropY * scale,
+                              width: params.cropWidth * scale, height: params.cropHeight * scale)
+                .intersection(image.extent)
+            if !rect.isEmpty {
+                image = image.cropped(to: rect)
+                // Re-origin so subsequent rendering starts at (0,0).
+                image = image.transformed(by: CGAffineTransform(
+                    translationX: -rect.origin.x, y: -rect.origin.y))
+            }
+        }
 
         if params.exposure != 0 {
             image = image.applyingFilter("CIExposureAdjust",
@@ -44,7 +73,7 @@ public enum AdjustmentRenderer {
             ])
         }
 
-        guard let out = context.createCGImage(image, from: CIImage(cgImage: cg).extent) else {
+        guard let out = context.createCGImage(image, from: image.extent) else {
             return cg
         }
         return out

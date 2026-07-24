@@ -110,7 +110,13 @@ public extension Exporter {
         }
         guard var cg = base else { throw ExportError.decodeFailed(photo.version.name) }
         if let params = library.olAdjustments(for: photo) {
-            cg = AdjustmentRenderer.apply(params, to: cg)
+            // Crop coordinates are in master space; scale for resized exports.
+            let masterSize: CGSize? = {
+                guard let w = photo.version.masterWidth, let h = photo.version.masterHeight,
+                      w > 0, h > 0 else { return nil }
+                return CGSize(width: w, height: h)
+            }()
+            cg = AdjustmentRenderer.apply(params, to: cg, masterPixelSize: masterSize)
         }
         let rendered = Exporter.applyWatermark(cg, settings.watermark)
         let dest = uniqueURL(in: directory, base: photo.version.name + settings.fileNameSuffix,
