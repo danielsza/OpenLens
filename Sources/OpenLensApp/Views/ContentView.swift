@@ -156,12 +156,16 @@ struct ContentView: View {
                 Divider().overlay(Theme.hairline)
             }
             content
-            Divider().overlay(Theme.hairline)
-            ControlBar(store: store)
+            if store.viewMode != .split {
+                // Split view carries its own control strip under the viewer.
+                Divider().overlay(Theme.hairline)
+                ControlBar(store: store)
+            }
         }
         .background(Theme.appBackground)
         .background(keyboardShortcuts)
         .focusable()
+        .focusEffectDisabled()
         .onMoveCommand { direction in
             switch direction {
             case .left, .up: store.selectOffset(-1)
@@ -204,7 +208,12 @@ struct ContentView: View {
         case .split:
             VSplitView {
                 ImageViewer(store: store).frame(minHeight: 200)
-                Filmstrip(store: store).frame(height: 118)
+                VStack(spacing: 0) {
+                    ControlBar(store: store)
+                    Divider().overlay(Theme.hairline)
+                    Filmstrip(store: store)
+                }
+                .frame(height: store.filmstripThumbSize * 0.72 + 24 + 36)
             }
         case .viewer:
             ImageViewer(store: store)
@@ -217,7 +226,7 @@ struct ContentView: View {
                 Text("All").tag(0)
                 ForEach(1...5, id: \.self) { Text("\($0)★+").tag($0) }
             }
-            .pickerStyle(.menu).fixedSize()
+            .pickerStyle(.menu).frame(width: 108)
 
             Toggle(isOn: $store.filter.flaggedOnly) {
                 Image(systemName: "flag")
@@ -238,7 +247,7 @@ struct ContentView: View {
             Picker("Sort", selection: $store.sort) {
                 ForEach(PhotoSort.allCases) { Text($0.rawValue).tag($0) }
             }
-            .pickerStyle(.menu).fixedSize()
+            .pickerStyle(.menu).frame(width: 128)
             Button {
                 store.sortAscending.toggle()
             } label: {

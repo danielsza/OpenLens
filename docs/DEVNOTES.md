@@ -49,6 +49,14 @@ corrupted SQLite's heap. Fix: **open every connection with
   sizes across filter bar + control bar + sliders, filmstrip pane height
   matched to content (kills grey banding), control-bar group dividers.
 
+- **2026-07-24** From Daniel's feedback: blue divider line was the macOS focus
+  ring on the focusable center column → min platform bumped to **macOS 14**
+  and `.focusEffectDisabled()` applied. Control bar redesigned Aperture-style:
+  centered, larger rating/flag/label cluster; in Split view it now sits
+  directly UNDER THE VIEWER above the filmstrip. Thumbnail-size slider now
+  resizes the filmstrip too (pane height follows). Rating/Sort pickers had
+  collapsed under fixedSize+small — explicit widths restored.
+
 ## Hard-won format lessons (see also docs/aperture-format.md)
 1. **Dates** are seconds since 2001-01-01 (NSDate epoch), not Unix.
 2. **Ratings/flags/labels live in two places**: `RKVersion` *and* the

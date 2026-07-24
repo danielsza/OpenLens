@@ -48,6 +48,11 @@ final class LibraryStore: ObservableObject {
     @Published var viewMode: ViewMode = .split
     @Published var thumbnailSize: Double = 150
 
+    /// The filmstrip follows the size slider too (clamped to strip-sane sizes).
+    var filmstripThumbSize: CGFloat {
+        min(max(CGFloat(thumbnailSize) * 0.7, 64), 170)
+    }
+
     @Published var filter = PhotoFilter()
     @Published var sort: PhotoSort = .date
     @Published var sortAscending = true

@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "OpenLens",
     platforms: [
-        .macOS(.v13)
+        .macOS(.v14)
     ],
     products: [
         // The reusable core: models + Aperture library reader/writer.

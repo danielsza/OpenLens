@@ -139,7 +139,8 @@ struct Filmstrip: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     ForEach(store.visiblePhotos) { photo in
-                        PhotoThumbnail(store: store, photo: photo, size: 96, showCaption: false)
+                        PhotoThumbnail(store: store, photo: photo,
+                                       size: store.filmstripThumbSize, showCaption: false)
                             .id(photo.id)
                     }
                 }

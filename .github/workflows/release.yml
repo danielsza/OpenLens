@@ -59,7 +59,7 @@ jobs:
             <key>CFBundlePackageType</key><string>APPL</string>
             <key>CFBundleShortVersionString</key><string>${VERSION}</string>
             <key>CFBundleVersion</key><string>${VERSION}</string>
-            <key>LSMinimumSystemVersion</key><string>13.0</string>
+            <key>LSMinimumSystemVersion</key><string>14.0</string>
             <key>NSHighResolutionCapable</key><true/>
             <key>NSPrincipalClass</key><string>NSApplication</string>
             <key>CFBundleIconFile</key><string>OpenLens</string>
@@ -108,7 +108,7 @@ jobs:
                 <title>OpenLens ${VERSION}</title>
                 <sparkle:version>${VERSION}</sparkle:version>
                 <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
-                <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+                <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
                 <link>https://github.com/danielsza/OpenLens/releases</link>
                 <enclosure
                   url="https://github.com/danielsza/OpenLens/releases/download/${GITHUB_REF_NAME}/OpenLens-${GITHUB_REF_NAME}.zip"
