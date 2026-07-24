@@ -5,6 +5,25 @@ import XCTest
 /// real libraries vary across Aperture versions.
 final class ResilienceTests: XCTestCase {
 
+    func testConcurrentReadsOnSharedConnectionAreSafe() throws {
+        // Regression test for the 0.1.5 crash: UI thread + background image
+        // loaders hammering one SQLite connection simultaneously.
+        guard let path = ProcessInfo.processInfo.environment["OPENLENS_TEST_LIBRARY"] else {
+            throw XCTSkip("Set OPENLENS_TEST_LIBRARY")
+        }
+        let lib = try ApertureLibrary(url: URL(fileURLWithPath: path))
+        let photos = try lib.photos()
+        XCTAssertFalse(photos.isEmpty)
+        DispatchQueue.concurrentPerform(iterations: 200) { i in
+            let photo = photos[i % photos.count]
+            _ = lib.olAdjustments(for: photo)
+            _ = try? lib.keywords(for: photo)
+            _ = try? lib.stacks()
+            _ = try? lib.photos()
+            _ = lib.tableExists("RKVersion")
+        }
+    }
+
     func testMissingOptionalTablesDegradeGracefully() throws {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("OpenLens-resil-\(UUID().uuidString).aplibrary")

@@ -197,12 +197,22 @@ public final class ApertureLibrary {
 
     // MARK: - Helpers
 
+    private var cachedTableNames: Set<String>?
+    private let tableNamesLock = NSLock()
+
     /// Whether a table exists — lets optional features degrade gracefully on
     /// libraries from Aperture versions with a slightly different schema.
+    /// Cached after the first call (the schema can't change under an
+    /// immutable-mode reader) and lock-protected for cross-thread use.
     public func tableExists(_ name: String) -> Bool {
-        let rows = (try? libraryDB.query(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name = ?", [.text(name)])) ?? []
-        return !rows.isEmpty
+        tableNamesLock.lock()
+        defer { tableNamesLock.unlock() }
+        if cachedTableNames == nil {
+            let rows = (try? libraryDB.query(
+                "SELECT name FROM sqlite_master WHERE type='table'")) ?? []
+            cachedTableNames = Set(rows.compactMap { $0["name"]?.stringValue })
+        }
+        return cachedTableNames?.contains(name) ?? false
     }
 
     static func makeVersion(from row: SQLiteDatabase.Row) -> PhotoVersion {

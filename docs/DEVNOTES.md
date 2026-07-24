@@ -37,6 +37,13 @@ metadata, keywords, stacks, and (eventually) adjustments. See `README.md` and
   and the per-image `.apversion` plist in sync where both store the value.
 - Tests that mutate **always operate on a temp copy** of the library.
 
+## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
+A shared `sqlite3*` connection used concurrently from the main thread (UI
+reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)
+corrupted SQLite's heap. Fix: **open every connection with
+`SQLITE_OPEN_FULLMUTEX`** (serialized mode) + cache `tableExists`. A
+`concurrentPerform` regression test hammers a shared connection in CI.
+
 ## Hard-won format lessons (see also docs/aperture-format.md)
 1. **Dates** are seconds since 2001-01-01 (NSDate epoch), not Unix.
 2. **Ratings/flags/labels live in two places**: `RKVersion` *and* the

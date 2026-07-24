@@ -70,22 +70,28 @@ public final class SQLiteDatabase {
     public init(path: String, readOnly: Bool = true, create: Bool = false) throws {
         self.path = path
         var rc: Int32
+        // FULLMUTEX (serialized mode) makes a single connection safe to use
+        // from multiple threads — the UI thread and background image loaders
+        // share these handles. Without it, concurrent prepares corrupt the
+        // heap (crash observed in the wild on 0.1.5).
         if create {
             rc = sqlite3_open_v2(path, &handle,
-                                 SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nil)
+                                 SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nil)
         } else if readOnly {
             let encoded = path.addingPercentEncoding(
                 withAllowedCharacters: .urlPathAllowed) ?? path
             let uri = "file:\(encoded)?immutable=1"
             rc = sqlite3_open_v2(uri, &handle,
-                                 SQLITE_OPEN_READONLY | SQLITE_OPEN_URI, nil)
+                                 SQLITE_OPEN_READONLY | SQLITE_OPEN_URI | SQLITE_OPEN_FULLMUTEX, nil)
             if rc != SQLITE_OK {
                 // Fall back to a plain read-only open.
                 sqlite3_close(handle); handle = nil
-                rc = sqlite3_open_v2(path, &handle, SQLITE_OPEN_READONLY, nil)
+                rc = sqlite3_open_v2(path, &handle,
+                                     SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX, nil)
             }
         } else {
-            rc = sqlite3_open_v2(path, &handle, SQLITE_OPEN_READWRITE, nil)
+            rc = sqlite3_open_v2(path, &handle,
+                                 SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX, nil)
         }
         if rc != SQLITE_OK {
             let msg = String(cString: sqlite3_errmsg(handle))
