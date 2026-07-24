@@ -36,6 +36,18 @@ final class AlbumsKeywordsTests: XCTestCase {
         }
     }
 
+    func testKeywordsByVersionMap() throws {
+        let lib = try openTestLibrary()
+        let map = try lib.keywordsByVersion()
+        // Fixture: version modelId 100 has "Beach".
+        XCTAssertEqual(map[100], ["Beach"])
+        // Totals match per-photo reads.
+        for photo in try lib.photos() {
+            let expected = try lib.keywords(for: photo).sorted()
+            XCTAssertEqual((map[photo.version.modelId] ?? []).sorted(), expected)
+        }
+    }
+
     func testPhotosInAlbumAreSubset() throws {
         let lib = try openTestLibrary()
         let allIDs = Set(try lib.photos().map { $0.id })

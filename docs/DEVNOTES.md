@@ -390,6 +390,12 @@ OPENLENS_TEST_LIBRARY=Tests/Fixtures/Mini.aplibrary swift test
   Deferred pending real hardware/data: tethering, Raw Fine Tuning (CIRAWFilter),
   referenced-master alias resolution (needs a referenced sample library).
 
+- **2026-07-23** Batch for v0.1.3: **full-screen editing mode** (F toggles,
+  Esc exits; hides left panel + filter bar; face boxes moved to **B**),
+  **thumbnail context menus** (rating/flag/label/duplicate/rotate/editor/
+  Finder/trash-or-put-back), **filter-bar search matches keywords** too
+  (preloaded keywordsByVersion map — no per-photo queries). + test.
+
 ### Current state (as of 2026-07-23)
 - ~95 tests, green in CI; near-complete Aperture parity for viewing/organizing,
   validated against a real 676MB library (babcia). Daniel is actively testing

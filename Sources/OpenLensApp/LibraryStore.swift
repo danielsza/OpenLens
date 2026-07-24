@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import SwiftUI
 import OpenLensKit
 
@@ -50,6 +51,10 @@ final class LibraryStore: ObservableObject {
     @Published var filter = PhotoFilter()
     @Published var sort: PhotoSort = .date
     @Published var sortAscending = true
+    /// Filter-bar search: matches photo name OR assigned keywords.
+    @Published var searchText = ""
+    /// Preloaded keyword assignments (version modelId -> names) for fast search.
+    private var keywordMap: [Int: [String]] = [:]
 
     /// OpenLens-native smart album: a named saved filter.
     struct SmartAlbum: Identifiable, Codable, Hashable {
@@ -106,7 +111,16 @@ final class LibraryStore: ObservableObject {
         } else {
             base = photos
         }
-        return filter.apply(to: base).sorted(by: sort, ascending: sortAscending)
+        var result = filter.apply(to: base)
+        let q = searchText.trimmingCharacters(in: .whitespaces).lowercased()
+        if !q.isEmpty {
+            result = result.filter { photo in
+                photo.version.name.lowercased().contains(q)
+                    || (keywordMap[photo.version.modelId] ?? [])
+                        .contains { $0.lowercased().contains(q) }
+            }
+        }
+        return result.sorted(by: sort, ascending: sortAscending)
     }
 
     func selectProject(_ id: String?) {
@@ -195,6 +209,8 @@ final class LibraryStore: ObservableObject {
     @Published var adjustmentsRevision = 0
     /// The floating Adjustments HUD over the viewer (Aperture-style).
     @Published var showAdjustmentsHUD = false
+    /// Full-screen editing mode: hides the left panel and chrome (F key).
+    @Published var fullScreenMode = false
 
     /// The values currently being edited (shared by the inspector tab and the
     /// HUD so they stay in sync) and their last-saved baseline.
@@ -312,6 +328,26 @@ final class LibraryStore: ObservableObject {
         catch { errorMessage = "Couldn't restore: \(error)" }
     }
 
+    func duplicate(_ photo: Photo) {
+        guard let w = makeWriter() else { return }
+        do {
+            let newUuid = try w.duplicateVersion(photo.version.id)
+            reload()
+            selectedPhotoID = newUuid
+            selectedPhotoIDs = [newUuid]
+        } catch { errorMessage = "Couldn't duplicate: \(error)" }
+    }
+
+    func openInExternalEditor(_ photo: Photo) {
+        guard let lib = library else { return }
+        NSWorkspace.shared.open(lib.masterFileURL(for: photo.master))
+    }
+
+    func showInFinder(_ photo: Photo) {
+        guard let lib = library else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([lib.masterFileURL(for: photo.master)])
+    }
+
     func renameProject(_ uuid: String, to name: String) {
         guard let w = makeWriter() else { return }
         do { try w.renameProject(uuid, to: name); reload() }
@@ -381,6 +417,7 @@ final class LibraryStore: ObservableObject {
             }
             self.albumPhotos = map
             self.trashed = (try? lib.trashedPhotos()) ?? []
+            self.keywordMap = (try? lib.keywordsByVersion()) ?? [:]
             self.selectedProjectID = projects.first?.id
             self.selectedAlbumID = nil
             self.selectedSource = nil

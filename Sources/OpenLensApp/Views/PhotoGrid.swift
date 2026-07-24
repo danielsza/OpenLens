@@ -67,12 +67,50 @@ struct PhotoThumbnail: View {
                             command: mods.contains(.command),
                             shift: mods.contains(.shift))
         }
+        .contextMenu { contextMenuItems }
         .task(id: "\(photo.id)-\(Int(size))") { await load() }
     }
 
     private func load() async {
         guard let lib = store.library else { return }
         image = await ImageCache.shared.image(for: photo, in: lib, maxPixel: Int(size * 2))
+    }
+
+    @ViewBuilder
+    private var contextMenuItems: some View {
+        Menu("Rating") {
+            Button("Reject (9)") { store.setRating(-1, for: photo) }
+            Button("None (0)") { store.setRating(0, for: photo) }
+            ForEach(1...5, id: \.self) { n in
+                Button(String(repeating: "★", count: n)) { store.setRating(n, for: photo) }
+            }
+        }
+        Button(photo.version.isFlagged ? "Unflag" : "Flag") { store.toggleFlag(for: photo) }
+        Menu("Color Label") {
+            ForEach([ColorLabel.none, .red, .orange, .yellow, .green, .blue, .purple, .gray],
+                    id: \.rawValue) { label in
+                Button(label.displayName) { store.setColorLabel(label.rawValue, for: photo) }
+            }
+        }
+        Divider()
+        Button("Duplicate Version") { store.duplicate(photo) }
+        Button("Rotate Left") {
+            store.selectedPhotoID = photo.id; store.selectedPhotoIDs = [photo.id]
+            store.rotateSelection(clockwise: false)
+        }
+        Button("Rotate Right") {
+            store.selectedPhotoID = photo.id; store.selectedPhotoIDs = [photo.id]
+            store.rotateSelection(clockwise: true)
+        }
+        Divider()
+        Button("Open in External Editor") { store.openInExternalEditor(photo) }
+        Button("Show in Finder") { store.showInFinder(photo) }
+        Divider()
+        if photo.version.isInTrash {
+            Button("Put Back") { store.restoreFromTrash(photo) }
+        } else {
+            Button("Move to Trash") { store.moveToTrash(photo) }
+        }
     }
 }
 

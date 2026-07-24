@@ -36,12 +36,14 @@ struct ContentView: View {
 
     private var mainView: some View {
         HSplitView {
-            LeftInspector(store: store)
-                .frame(minWidth: 220, idealWidth: 260, maxWidth: 360)
+            if !store.fullScreenMode {
+                LeftInspector(store: store)
+                    .frame(minWidth: 220, idealWidth: 260, maxWidth: 360)
+            }
             centerColumn
                 .frame(minWidth: 520)
         }
-        .background(Theme.appBackground)
+        .background(store.fullScreenMode ? Color.black : Theme.appBackground)
         .navigationTitle(windowTitle)
         .toolbar { toolbarContent }
         .overlay {
@@ -134,8 +136,10 @@ struct ContentView: View {
 
     private var centerColumn: some View {
         VStack(spacing: 0) {
-            filterBar
-            Divider().overlay(Theme.hairline)
+            if !store.fullScreenMode {
+                filterBar
+                Divider().overlay(Theme.hairline)
+            }
             content
             Divider().overlay(Theme.hairline)
             ControlBar(store: store)
@@ -167,6 +171,11 @@ struct ContentView: View {
             // 9 = Reject (rating -1), as in Aperture.
             Button("") { store.setRatingForSelection(-1) }
                 .keyboardShortcut("9", modifiers: [])
+            // F = full-screen editing mode (Aperture muscle memory); Esc exits.
+            Button("") { store.fullScreenMode.toggle() }
+                .keyboardShortcut("f", modifiers: [])
+            Button("") { if store.fullScreenMode { store.fullScreenMode = false } }
+                .keyboardShortcut(.escape, modifiers: [])
         }
         .opacity(0)
         .frame(width: 0, height: 0)
@@ -207,9 +216,9 @@ struct ContentView: View {
             .toggleStyle(.button)
             .help("Show only edited photos")
 
-            TextField("Filter by name", text: $store.filter.nameContains)
+            TextField("Search name or keyword", text: $store.searchText)
                 .textFieldStyle(.roundedBorder)
-                .frame(minWidth: 90, idealWidth: 150, maxWidth: 170)
+                .frame(minWidth: 90, idealWidth: 160, maxWidth: 190)
 
             Picker("Sort", selection: $store.sort) {
                 ForEach(PhotoSort.allCases) { Text($0.rawValue).tag($0) }

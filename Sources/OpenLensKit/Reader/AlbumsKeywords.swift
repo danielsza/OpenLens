@@ -65,6 +65,23 @@ public extension ApertureLibrary {
         }
     }
 
+    /// All keyword assignments in one query: version modelId -> keyword names.
+    /// Used for fast in-app search without per-photo queries.
+    func keywordsByVersion() throws -> [Int: [String]] {
+        guard tableExists("RKKeywordForVersion"), tableExists("RKKeyword") else { return [:] }
+        let rows = try libraryDB.query("""
+            SELECT kv.versionId AS vid, k.name AS name
+            FROM RKKeywordForVersion kv JOIN RKKeyword k ON k.modelId = kv.keywordId
+            """)
+        var map: [Int: [String]] = [:]
+        for row in rows {
+            if let vid = row["vid"]?.intValue, let name = row["name"]?.stringValue {
+                map[vid, default: []].append(name)
+            }
+        }
+        return map
+    }
+
     /// Keyword names assigned to a specific photo (via `RKKeywordForVersion`).
     func keywords(for photo: Photo) throws -> [String] {
         guard tableExists("RKKeywordForVersion"), tableExists("RKKeyword") else { return [] }

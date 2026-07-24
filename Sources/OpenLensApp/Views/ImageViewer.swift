@@ -44,8 +44,9 @@ struct ImageViewer: View {
         Group {
             Button("") { loupeEnabled.toggle() }
                 .keyboardShortcut("`", modifiers: [])
+            // "b" = face Boxes ("f" is full-screen mode, like Aperture).
             Button("") { showFaces.toggle() }
-                .keyboardShortcut("f", modifiers: [])
+                .keyboardShortcut("b", modifiers: [])
             Button("") { store.showAdjustmentsHUD.toggle() }
                 .keyboardShortcut("h", modifiers: [])
             Button("") { stepLoupeZoom(1) }
