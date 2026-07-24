@@ -57,6 +57,10 @@ corrupted SQLite's heap. Fix: **open every connection with
   resizes the filmstrip too (pane height follows). Rating/Sort pickers had
   collapsed under fixedSize+small — explicit widths restored.
 
+- **2026-07-24** Filmstrip: breathing room at the bottom (padding 18) and an
+  Aperture-style **hover scrubber** — a mini slider fades in over the strip on
+  hover for jumping anywhere (only when >8 photos).
+
 ## Hard-won format lessons (see also docs/aperture-format.md)
 1. **Dates** are seconds since 2001-01-01 (NSDate epoch), not Unix.
 2. **Ratings/flags/labels live in two places**: `RKVersion` *and* the

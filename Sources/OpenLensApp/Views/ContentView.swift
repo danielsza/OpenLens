@@ -213,7 +213,7 @@ struct ContentView: View {
                     Divider().overlay(Theme.hairline)
                     Filmstrip(store: store)
                 }
-                .frame(height: store.filmstripThumbSize * 0.72 + 24 + 36)
+                .frame(height: store.filmstripThumbSize * 0.72 + 26 + 38)
             }
         case .viewer:
             ImageViewer(store: store)

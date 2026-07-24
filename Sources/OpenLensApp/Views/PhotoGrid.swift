@@ -131,9 +131,13 @@ struct GridBrowser: View {
     }
 }
 
-/// The horizontal filmstrip shown beneath the viewer in Split view.
+/// The horizontal filmstrip shown beneath the viewer in Split view. Hovering
+/// reveals a scrubber slider for jumping anywhere in the strip (Aperture-style).
 struct Filmstrip: View {
     @ObservedObject var store: LibraryStore
+    @State private var hovering = false
+    @State private var scrubPosition = 0.0
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
@@ -145,17 +149,41 @@ struct Filmstrip: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+                .padding(.top, 8)
+                .padding(.bottom, 18)   // breathing room + scrubber space
             }
             .background(Theme.browserBackground)
             // Bookends: fade the strip out at both edges like Aperture.
             .overlay(alignment: .leading) { edgeFade(leading: true) }
             .overlay(alignment: .trailing) { edgeFade(leading: false) }
             .overlay(alignment: .top) { Rectangle().fill(Color.black.opacity(0.25)).frame(height: 1) }
-            .onChange(of: store.selectedPhotoID) { id in
+            .overlay(alignment: .bottom) { scrubber(proxy) }
+            .onHover { hovering = $0 }
+            .onChange(of: store.selectedPhotoID) { _, id in
                 guard let id else { return }
                 withAnimation { proxy.scrollTo(id, anchor: .center) }
             }
+        }
+    }
+
+    /// Appears on hover; dragging jumps the strip anywhere in the library.
+    @ViewBuilder
+    private func scrubber(_ proxy: ScrollViewProxy) -> some View {
+        let photos = store.visiblePhotos
+        if hovering && photos.count > 8 {
+            Slider(value: Binding(
+                get: { scrubPosition },
+                set: { value in
+                    scrubPosition = value
+                    let idx = Int((value * Double(photos.count - 1)).rounded())
+                    proxy.scrollTo(photos[idx].id, anchor: .center)
+                }
+            ), in: 0...1)
+            .controlSize(.mini)
+            .padding(.horizontal, 26)
+            .padding(.bottom, 3)
+            .transition(.opacity)
+            .help("Scrub through the filmstrip")
         }
     }
 
