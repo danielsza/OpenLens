@@ -93,6 +93,23 @@ struct AdjustmentControls: View {
             brick("Sharpen") {
                 slider("Sharpness", \.sharpness, 0...1)
             }
+            brick("Geometry") {
+                slider("Straighten", \.straighten, -15...15)
+                if store.editParams.hasCrop {
+                    HStack {
+                        Text(String(format: "Crop %.0f × %.0f",
+                                    store.editParams.cropWidth, store.editParams.cropHeight))
+                            .font(.caption2).foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Clear") {
+                            store.editParams.cropX = 0; store.editParams.cropY = 0
+                            store.editParams.cropWidth = 0; store.editParams.cropHeight = 0
+                            store.previewAdjustments(store.editParams)
+                        }
+                        .controlSize(.mini)
+                    }
+                }
+            }
 
             HStack {
                 Button("Reset") {
