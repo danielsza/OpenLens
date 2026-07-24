@@ -59,6 +59,68 @@ final class LibraryStore: ObservableObject {
     /// Viewer zoom: 1 = fit, up to 8×.
     @Published var viewerZoom = 1.0
 
+    // MARK: - Brush (local adjustments)
+
+    /// Brush mode: dragging on the viewer paints a mask for a local layer.
+    @Published var brushMode = false
+    /// Brush radius in MASTER pixels.
+    @Published var brushRadius: Double = 80
+    @Published var brushSoftness: Double = 0.5
+    @Published var brushErase = false
+    /// The local layer's effect (geometry fields ignored for layers).
+    @Published var brushParams: OLAdjustments = {
+        var p = OLAdjustments(); p.exposure = 0.5; return p
+    }()
+    /// Layers being edited in this brush session (nil = none; falls back to
+    /// the saved layers in the catalog).
+    @Published var liveLayers: [OLLocalAdjustment]?
+
+    func toggleBrushMode() {
+        brushMode.toggle()
+        if brushMode, liveLayers == nil, let photo = selectedPhoto, let lib = library {
+            liveLayers = lib.olLocalAdjustments(for: photo)
+            if let params = liveLayers?.first?.params { brushParams = params }
+        }
+    }
+
+    /// Appends a finished stroke to the working layer and re-renders.
+    func addBrushStroke(_ stroke: OLBrushStroke) {
+        var layers = liveLayers ?? []
+        if layers.isEmpty {
+            layers = [OLLocalAdjustment(name: "Brush", params: brushParams)]
+        }
+        layers[0].params = brushParams
+        layers[0].mask.strokes.append(stroke)
+        liveLayers = layers
+        adjustmentsRevision += 1
+    }
+
+    /// Re-renders after the layer effect sliders change.
+    func brushParamsChanged() {
+        if var layers = liveLayers, !layers.isEmpty {
+            layers[0].params = brushParams
+            liveLayers = layers
+        }
+        adjustmentsRevision += 1
+    }
+
+    func clearBrushLayers() {
+        liveLayers = []
+        adjustmentsRevision += 1
+    }
+
+    func saveBrushLayers() {
+        guard let photo = selectedPhoto, let layers = liveLayers,
+              let w = makeWriter() else { return }
+        do {
+            try w.setOLLocalAdjustments(layers.filter { !$0.mask.isEmpty }, forVersion: photo.version.id)
+            reload()
+            selectedPhotoID = photo.id
+            selectedPhotoIDs = [photo.id]
+            adjustmentsRevision += 1
+        } catch { errorMessage = "Couldn't save brush layers: \(error)" }
+    }
+
     @Published var filter = PhotoFilter()
     @Published var sort: PhotoSort = .date
     @Published var sortAscending = true
@@ -178,7 +240,7 @@ final class LibraryStore: ObservableObject {
     func handleTap(_ photo: Photo, command: Bool, shift: Bool) {
         viewerFocused = false          // thumbnail interaction: slider sizes thumbs
         let changed = photo.id != selectedPhotoID
-        if changed { liveAdjustments = nil; viewerZoom = 1 }
+        if changed { liveAdjustments = nil; viewerZoom = 1; liveLayers = nil; brushMode = false }
         defer { if changed { syncEditParams() } }
         if command {
             if selectedPhotoIDs.contains(photo.id) { selectedPhotoIDs.remove(photo.id) }
@@ -470,7 +532,9 @@ final class LibraryStore: ObservableObject {
         guard !photos.isEmpty else { return }
         let idx = photos.firstIndex { $0.id == selectedPhotoID } ?? 0
         let next = max(0, min(photos.count - 1, idx + delta))
-        if photos[next].id != selectedPhotoID { liveAdjustments = nil }
+        if photos[next].id != selectedPhotoID {
+            liveAdjustments = nil; liveLayers = nil; brushMode = false
+        }
         selectedPhotoID = photos[next].id
         selectedPhotoIDs = [photos[next].id]
         syncEditParams()

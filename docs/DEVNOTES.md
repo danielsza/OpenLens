@@ -77,6 +77,15 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
   writer.setOLLocalAdjustments. Histogram v3: Apple-Photos style (0.35 additive
   fills + 1.2pt contour line per channel).
 
+- **2026-07-24** **Brush UI shipped** (dodge/burn/local edits): P key or
+  control-bar paintbrush toggles brush mode → transparent paint layer over the
+  fitted image captures drags (view-local top-left → master bottom-left
+  coords), cursor circle previews radius (red when erasing), stroke preview
+  while dragging, commit on release into store.liveLayers[0]. Brush HUD:
+  radius/softness/erase + effect (exposure/saturation/sharpness), Clear/Save
+  (writer.setOLLocalAdjustments). Viewer honours liveLayers override; session
+  resets on photo change.
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)

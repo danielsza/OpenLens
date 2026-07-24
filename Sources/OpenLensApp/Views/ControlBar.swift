@@ -32,6 +32,15 @@ struct ControlBar: View {
                 .buttonStyle(.plain)
                 .help("Adjustments HUD (H)")
 
+                Button {
+                    store.toggleBrushMode()
+                } label: {
+                    Image(systemName: "paintbrush.pointed")
+                        .foregroundStyle(store.brushMode ? Color.accentColor : Theme.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .help("Brush local adjustments (P)")
+
                 if store.viewerFocused && store.selectedPhoto != nil {
                     // Viewer is focused: the slider zooms the big image.
                     HStack(spacing: 6) {

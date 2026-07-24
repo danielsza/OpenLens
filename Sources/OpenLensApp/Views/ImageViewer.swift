@@ -16,6 +16,8 @@ struct ImageViewer: View {
     @State private var pan: CGSize = .zero
     @State private var panBase: CGSize = .zero
     @State private var lastPhotoID: String?
+    /// In-progress brush stroke, in fitted-rect-local view coordinates.
+    @State private var currentStroke: [CGPoint] = []
 
     private let loupeDiameter: CGFloat = 180
     /// Aperture offered 50%–1600%; step through with = / - while the loupe is on.
@@ -56,6 +58,8 @@ struct ImageViewer: View {
                 .keyboardShortcut("=", modifiers: [])
             Button("") { stepLoupeZoom(-1) }
                 .keyboardShortcut("-", modifiers: [])
+            Button("") { store.toggleBrushMode() }
+                .keyboardShortcut("p", modifiers: [])
         }
         .opacity(0)
         .frame(width: 0, height: 0)
@@ -66,6 +70,128 @@ struct ImageViewer: View {
         let idx = loupeZoomLevels.firstIndex { $0 >= loupeZoom } ?? 3
         let next = max(0, min(loupeZoomLevels.count - 1, idx + direction))
         loupeZoom = loupeZoomLevels[next]
+    }
+
+    // MARK: - Brush
+
+    private func brushViewScale(_ fitted: CGRect) -> Double {
+        guard let photo = store.selectedPhoto else { return 1 }
+        let mw = Double(photo.version.masterWidth ?? Int(image?.size.width ?? fitted.width))
+        return mw > 0 ? fitted.width / mw : 1
+    }
+
+    /// Transparent layer over the photo that captures paint strokes.
+    @ViewBuilder
+    private func brushPaintLayer(fitted: CGRect) -> some View {
+        let scale = brushViewScale(fitted)
+        ZStack(alignment: .topLeading) {
+            Color.clear
+            if currentStroke.count > 1 {
+                Path { p in p.addLines(currentStroke) }
+                    .stroke(Color.white.opacity(store.brushErase ? 0.15 : 0.35),
+                            style: StrokeStyle(lineWidth: max(2, 2 * store.brushRadius * scale),
+                                               lineCap: .round, lineJoin: .round))
+            }
+        }
+        .frame(width: fitted.width, height: fitted.height)
+        .contentShape(Rectangle())
+        .onContinuousHover { phase in
+            switch phase {
+            case .active(let p):
+                hover = CGPoint(x: p.x + fitted.minX, y: p.y + fitted.minY)
+            case .ended:
+                hover = nil
+            }
+        }
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { value in currentStroke.append(value.location) }
+                .onEnded { _ in commitStroke(fitted: fitted) }
+        )
+        .position(x: fitted.midX, y: fitted.midY)
+    }
+
+    private func commitStroke(fitted: CGRect) {
+        defer { currentStroke = [] }
+        guard !currentStroke.isEmpty, let photo = store.selectedPhoto else { return }
+        let mw = Double(photo.version.masterWidth ?? Int(image?.size.width ?? fitted.width))
+        let mh = Double(photo.version.masterHeight ?? Int(image?.size.height ?? fitted.height))
+        guard mw > 0, mh > 0, fitted.width > 0, fitted.height > 0 else { return }
+        // View-local (top-left origin) → master pixels (bottom-left origin).
+        let points = currentStroke.map { p in
+            OLBrushPoint(x: Double(p.x / fitted.width) * mw,
+                         y: mh - Double(p.y / fitted.height) * mh)
+        }
+        store.addBrushStroke(OLBrushStroke(points: points,
+                                           radius: store.brushRadius,
+                                           softness: store.brushSoftness,
+                                           flow: 1,
+                                           erase: store.brushErase))
+    }
+
+    /// Floating brush controls (radius/softness/erase + the layer's effect).
+    private var brushHUD: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label("Brush", systemImage: "paintbrush.pointed")
+                    .font(.caption.bold())
+                Spacer()
+                Button { store.toggleBrushMode() } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            brushSlider("Radius", value: $store.brushRadius, in: 10...300)
+            brushSlider("Softness", value: $store.brushSoftness, in: 0...1)
+            Toggle("Erase", isOn: $store.brushErase)
+                .font(.caption2).toggleStyle(.checkbox)
+
+            Divider()
+            Text("Effect").font(.caption2.bold()).foregroundStyle(.secondary)
+            effectSlider("Exposure", \.exposure, -2...2)
+            effectSlider("Saturation", \.saturation, 0...2)
+            effectSlider("Sharpness", \.sharpness, 0...1)
+
+            HStack {
+                Button("Clear") { store.clearBrushLayers() }.controlSize(.small)
+                Spacer()
+                Button("Save") { store.saveBrushLayers() }
+                    .buttonStyle(.borderedProminent).controlSize(.small)
+            }
+            Text("Paint on the photo to apply the effect locally.")
+                .font(.caption2).foregroundStyle(.secondary)
+        }
+        .padding(10)
+        .frame(width: 250)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.15)))
+        .shadow(radius: 10)
+        .environment(\.colorScheme, .dark)
+    }
+
+    private func brushSlider(_ label: String, value: Binding<Double>,
+                             in range: ClosedRange<Double>) -> some View {
+        HStack(spacing: 6) {
+            Text(label).font(.caption2).frame(width: 56, alignment: .leading)
+            Slider(value: value, in: range).controlSize(.mini)
+        }
+    }
+
+    private func effectSlider(_ label: String,
+                              _ keyPath: WritableKeyPath<OLAdjustments, Double>,
+                              _ range: ClosedRange<Double>) -> some View {
+        HStack(spacing: 6) {
+            Text(label).font(.caption2).frame(width: 56, alignment: .leading)
+            Slider(value: Binding(
+                get: { store.brushParams[keyPath: keyPath] },
+                set: { store.brushParams[keyPath: keyPath] = $0
+                       store.brushParamsChanged() }
+            ), in: range)
+            .controlSize(.mini)
+            Text(String(format: "%.2f", store.brushParams[keyPath: keyPath]))
+                .font(.caption2).monospacedDigit().foregroundStyle(.secondary)
+                .frame(width: 32, alignment: .trailing)
+        }
     }
 
     /// Aperture-style floating Adjustments HUD.
@@ -176,6 +302,19 @@ struct ImageViewer: View {
                     .position(x: fitted.midX, y: fitted.midY)
                     .allowsHitTesting(false)
 
+                if store.brushMode {
+                    brushPaintLayer(fitted: fitted)
+                    if let p = hover {
+                        let d = max(6, 2 * store.brushRadius * brushViewScale(fitted))
+                        Circle()
+                            .stroke(store.brushErase ? Color.red.opacity(0.8)
+                                                     : Color.white.opacity(0.8), lineWidth: 1.5)
+                            .frame(width: d, height: d)
+                            .position(p)
+                            .allowsHitTesting(false)
+                    }
+                }
+
                 if showFaces {
                     ForEach(faces) { face in
                         let r = CGRect(x: fitted.minX + face.rect.minX * fitted.width,
@@ -204,6 +343,10 @@ struct ImageViewer: View {
                 if store.showAdjustmentsHUD {
                     adjustmentsHUD
                         .position(x: geo.size.width - 160, y: min(geo.size.height - 220, 260))
+                }
+                if store.brushMode {
+                    brushHUD
+                        .position(x: 140, y: max(200, geo.size.height - 200))
                 }
             }
         }
@@ -264,7 +407,8 @@ struct ImageViewer: View {
             return
         }
         image = await ImageCache.shared.fullImage(for: photo, in: lib,
-                                                  adjustments: store.liveAdjustments)
+                                                  adjustments: store.liveAdjustments,
+                                                  layersOverride: store.liveLayers)
         faces = lib.detectedFaces(for: photo)
         // Prefetch neighbours so arrow-key browsing feels instant.
         let photos = store.visiblePhotos

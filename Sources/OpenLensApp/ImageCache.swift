@@ -60,11 +60,12 @@ final class ImageCache {
 
     /// Full-resolution decode for the viewer (cached at a high-size key).
     func fullImage(for photo: Photo, in library: ApertureLibrary,
-                   adjustments: OLAdjustments? = nil) async -> NSImage? {
+                   adjustments: OLAdjustments? = nil,
+                   layersOverride: [OLLocalAdjustment]? = nil) async -> NSImage? {
         let rotation = photo.version.rotation
         // Live override wins; else any saved OpenLens adjustments.
         let params = adjustments ?? library.olAdjustments(for: photo)
-        let layers = library.olLocalAdjustments(for: photo)
+        let layers = layersOverride ?? library.olLocalAdjustments(for: photo)
         let layersKey = (try? OLLocalAdjustment.encodeList(layers))?.hashValue ?? 0
         let k = key("\(photo.id)#\(rotation)#\(params?.cacheKey ?? "-")#L\(layersKey)", 0)
         if let hit = cache.object(forKey: k) { return hit }
