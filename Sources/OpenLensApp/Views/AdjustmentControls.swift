@@ -9,16 +9,12 @@ struct RGBHistogramView: View {
         GeometryReader { geo in
             if let h = histogram {
                 let maxV = max(h.red.max() ?? 1, h.green.max() ?? 1, h.blue.max() ?? 1, 1)
-                // True additive blending PER CHANNEL (pure primaries on black):
-                // one channel = pure colour, two = secondary, all three = white,
-                // exactly like Aperture's histogram.
+                // Apple Photos style: translucent additive fills + a crisp
+                // bright contour line along each channel's curve.
                 ZStack {
-                    channel(h.red, Color(red: 1, green: 0, blue: 0), maxV, geo.size)
-                        .blendMode(.plusLighter)
-                    channel(h.green, Color(red: 0, green: 1, blue: 0), maxV, geo.size)
-                        .blendMode(.plusLighter)
-                    channel(h.blue, Color(red: 0, green: 0, blue: 1), maxV, geo.size)
-                        .blendMode(.plusLighter)
+                    channel(h.red, Color(red: 1, green: 0.15, blue: 0.15), maxV, geo.size)
+                    channel(h.green, Color(red: 0.15, green: 1, blue: 0.2), maxV, geo.size)
+                    channel(h.blue, Color(red: 0.25, green: 0.4, blue: 1), maxV, geo.size)
                 }
                 .compositingGroup()
             } else {
@@ -28,26 +24,42 @@ struct RGBHistogramView: View {
         }
         .background(Color.black)
         .clipShape(RoundedRectangle(cornerRadius: 5))
-        .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color.black.opacity(0.5)))
+        .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color.white.opacity(0.08)))
     }
 
+    @ViewBuilder
     private func channel(_ values: [Int], _ color: Color, _ maxV: Int, _ size: CGSize) -> some View {
         let smoothed = Self.smooth(values)
-        return Path { path in
-            guard !smoothed.isEmpty else { return }
+        // Soft translucent body, additively blended so overlaps mix subtly.
+        fillPath(smoothed, maxV, size, closed: true)
+            .fill(color.opacity(0.35))
+            .blendMode(.plusLighter)
+        // Crisp contour on top — this is what makes it read "sharp".
+        fillPath(smoothed, maxV, size, closed: false)
+            .stroke(color, style: StrokeStyle(lineWidth: 1.2, lineJoin: .round))
+            .blendMode(.plusLighter)
+    }
+
+    private func fillPath(_ smoothed: [Double], _ maxV: Int, _ size: CGSize,
+                          closed: Bool) -> Path {
+        Path { path in
+            guard smoothed.count > 1 else { return }
             let step = size.width / CGFloat(smoothed.count - 1)
-            path.move(to: CGPoint(x: 0, y: size.height))
-            for (i, v) in smoothed.enumerated() {
-                // Power-compress peaks so the shape fills out like Aperture's
-                // rather than a few needle spikes dominating.
+            func y(_ v: Double) -> CGFloat {
+                // Power-compress peaks so a few spikes don't flatten the rest.
                 let norm = pow(min(1, v / Double(maxV)), 0.6)
-                let y = size.height * (1 - CGFloat(norm))
-                path.addLine(to: CGPoint(x: CGFloat(i) * step, y: y))
+                return size.height * (1 - CGFloat(norm))
             }
-            path.addLine(to: CGPoint(x: size.width, y: size.height))
-            path.closeSubpath()
+            if closed { path.move(to: CGPoint(x: 0, y: size.height)) }
+            for (i, v) in smoothed.enumerated() {
+                let p = CGPoint(x: CGFloat(i) * step, y: y(v))
+                if i == 0 && !closed { path.move(to: p) } else { path.addLine(to: p) }
+            }
+            if closed {
+                path.addLine(to: CGPoint(x: size.width, y: size.height))
+                path.closeSubpath()
+            }
         }
-        .fill(color.opacity(0.9))
     }
 
     /// 5-tap weighted moving average — smooths bucket noise into clean curves.

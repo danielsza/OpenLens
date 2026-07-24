@@ -67,6 +67,16 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
   luminance). Unverified blind spots: CIRAWFilter orientation handling on
   rotated shots; chroma-blur/moire keys not yet mapped.
 
+- **2026-07-24** **Mask infrastructure (Kit layer)**: OLBrushPoint/Stroke/
+  OLMask (master-space coords) + OLLocalAdjustment layers stored in row
+  "OLLocalAdjustmentsV1"; MaskRasterizer (soft radial stamps, interpolated
+  polylines, lighten-additive, erase paints black); AdjustmentRenderer.
+  applyStack(global:layers:) — layers colour-only via CIBlendWithMask BEFORE
+  global geometry/colour; viewer renders saved layers (cache key includes
+  them). NO BRUSH UI YET — next step is viewer brush mode writing strokes via
+  writer.setOLLocalAdjustments. Histogram v3: Apple-Photos style (0.35 additive
+  fills + 1.2pt contour line per channel).
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)

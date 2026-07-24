@@ -2,7 +2,8 @@ import Foundation
 import CoreGraphics
 import CoreImage
 
-/// Renders `OLAdjustments` onto an image with Core Image, non-destructively.
+/// Renders `OLAdjustments` (and masked local layers) onto an image with
+/// Core Image, non-destructively.
 public enum AdjustmentRenderer {
 
     private static let context = CIContext(options: [.useSoftwareRenderer: false])
@@ -16,32 +17,64 @@ public enum AdjustmentRenderer {
     /// is the full-resolution master (scale 1).
     public static func apply(_ params: OLAdjustments, to cg: CGImage,
                              masterPixelSize: CGSize? = nil) -> CGImage {
-        guard !params.isIdentity else { return cg }
-        var image = CIImage(cgImage: cg)
+        applyStack(global: params, layers: [], to: cg, masterPixelSize: masterPixelSize)
+    }
 
-        // Geometry first (straighten around the centre, then crop), so colour
-        // work runs on the final pixels only.
-        if params.straighten != 0 {
-            let radians = params.straighten * .pi / 180
+    /// Applies local (masked) layers first, then the global adjustments
+    /// (geometry + colour). Layer geometry fields are ignored.
+    public static func applyStack(global: OLAdjustments, layers: [OLLocalAdjustment],
+                                  to cg: CGImage, masterPixelSize: CGSize? = nil) -> CGImage {
+        let activeLayers = layers.filter { $0.enabled && !$0.mask.isEmpty && !$0.params.isIdentity }
+        guard !global.isIdentity || !activeLayers.isEmpty else { return cg }
+
+        var image = CIImage(cgImage: cg)
+        let renderedSize = CGSize(width: cg.width, height: cg.height)
+        let master = masterPixelSize ?? renderedSize
+
+        // 1. Local layers (colour-only, blended through their masks).
+        for layer in activeLayers {
+            guard let maskCG = MaskRasterizer.rasterize(layer.mask, masterSize: master,
+                                                        targetSize: renderedSize) else { continue }
+            let adjusted = colorPipeline(image, layer.params)
+            image = adjusted.applyingFilter("CIBlendWithMask", parameters: [
+                kCIInputBackgroundImageKey: image,
+                kCIInputMaskImageKey: CIImage(cgImage: maskCG)
+            ])
+        }
+
+        // 2. Global geometry (straighten about the centre, then crop).
+        if global.straighten != 0 {
+            let radians = global.straighten * .pi / 180
             let extent = image.extent
             let rotate = CGAffineTransform(translationX: extent.midX, y: extent.midY)
                 .rotated(by: radians)
                 .translatedBy(x: -extent.midX, y: -extent.midY)
             image = image.transformed(by: rotate).cropped(to: extent)
         }
-        if params.hasCrop {
-            let scale = masterPixelSize.map { Double(cg.width) / max(1, $0.width) } ?? 1
-            let rect = CGRect(x: params.cropX * scale, y: params.cropY * scale,
-                              width: params.cropWidth * scale, height: params.cropHeight * scale)
+        if global.hasCrop {
+            let scale = Double(cg.width) / max(1, master.width)
+            let rect = CGRect(x: global.cropX * scale, y: global.cropY * scale,
+                              width: global.cropWidth * scale, height: global.cropHeight * scale)
                 .intersection(image.extent)
             if !rect.isEmpty {
                 image = image.cropped(to: rect)
-                // Re-origin so subsequent rendering starts at (0,0).
                 image = image.transformed(by: CGAffineTransform(
                     translationX: -rect.origin.x, y: -rect.origin.y))
             }
         }
 
+        // 3. Global colour.
+        image = colorPipeline(image, global)
+
+        guard let out = context.createCGImage(image, from: image.extent) else {
+            return cg
+        }
+        return out
+    }
+
+    /// The colour portion of the pipeline (no geometry).
+    private static func colorPipeline(_ input: CIImage, _ params: OLAdjustments) -> CIImage {
+        var image = input
         if params.exposure != 0 {
             image = image.applyingFilter("CIExposureAdjust",
                                          parameters: [kCIInputEVKey: params.exposure])
@@ -72,10 +105,6 @@ public enum AdjustmentRenderer {
                 kCIInputSharpnessKey: params.sharpness
             ])
         }
-
-        guard let out = context.createCGImage(image, from: image.extent) else {
-            return cg
-        }
-        return out
+        return image
     }
 }

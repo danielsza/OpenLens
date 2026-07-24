@@ -64,13 +64,15 @@ final class ImageCache {
         let rotation = photo.version.rotation
         // Live override wins; else any saved OpenLens adjustments.
         let params = adjustments ?? library.olAdjustments(for: photo)
-        let k = key("\(photo.id)#\(rotation)#\(params?.cacheKey ?? "-")", 0)
+        let layers = library.olLocalAdjustments(for: photo)
+        let layersKey = (try? OLLocalAdjustment.encodeList(layers))?.hashValue ?? 0
+        let k = key("\(photo.id)#\(rotation)#\(params?.cacheKey ?? "-")#L\(layersKey)", 0)
         if let hit = cache.object(forKey: k) { return hit }
         // With OpenLens adjustments active, render from the MASTER so our
         // params fully define the look (applying them over Aperture's baked
         // preview would double-apply edits). Otherwise prefer the preview.
         let url: URL
-        if params != nil {
+        if params != nil || !layers.isEmpty {
             let master = library.masterFileURL(for: photo.master)
             url = FileManager.default.fileExists(atPath: master.path)
                 ? master
@@ -100,8 +102,10 @@ final class ImageCache {
             }
             base = base ?? ImageLoader.cgImage(at: url, maxPixelSize: 2400)
             guard var image = base else { return nil }
-            if let params {
-                image = AdjustmentRenderer.apply(params, to: image, masterPixelSize: masterSize)
+            if params != nil || !layers.isEmpty {
+                image = AdjustmentRenderer.applyStack(global: params ?? OLAdjustments(),
+                                                      layers: layers, to: image,
+                                                      masterPixelSize: masterSize)
             }
             return ImageLoader.rotate(image, degrees: applyRotation)
         }.value

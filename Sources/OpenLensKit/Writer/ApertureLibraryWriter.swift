@@ -179,6 +179,44 @@ public final class ApertureLibraryWriter {
                               adjustments: params)
     }
 
+    /// Saves OpenLens local (masked) adjustment layers for a version.
+    /// An empty list removes the row.
+    public func setOLLocalAdjustments(_ layers: [OLLocalAdjustment],
+                                      forVersion uuid: String) throws {
+        guard allowWrites else { throw WriteError.writesNotAllowed }
+        let db = try SQLiteDatabase(path: dbPath, readOnly: false)
+        let rowName = ApertureLibrary.olLocalAdjustmentName
+        if layers.isEmpty {
+            try db.execute("DELETE FROM RKImageAdjustment WHERE versionUuid = ? AND name = ?",
+                           [.text(uuid), .text(rowName)])
+            return
+        }
+        let data = try OLLocalAdjustment.encodeList(layers)
+        let existing = try db.query(
+            "SELECT modelId FROM RKImageAdjustment WHERE versionUuid = ? AND name = ?",
+            [.text(uuid), .text(rowName)])
+        if let mid = existing.first?["modelId"]?.intValue {
+            try db.execute("UPDATE RKImageAdjustment SET data = ?, isEnabled = 1 WHERE modelId = ?",
+                           [.blob(data), .integer(Int64(mid))])
+        } else {
+            let mid = try nextModelId("RKImageAdjustment", db)
+            let idx = (try db.query(
+                "SELECT COALESCE(MAX(adjIndex), -1) + 1 AS n FROM RKImageAdjustment WHERE versionUuid = ?",
+                [.text(uuid)]).first?["n"]?.intValue) ?? 0
+            try db.execute("""
+                INSERT INTO RKImageAdjustment(modelId, uuid, name, versionUuid, maskUuid,
+                    adjIndex, isEnabled, data, dbVersion)
+                VALUES (?, ?, ?, ?, NULL, ?, 1, ?, 1)
+                """, [.integer(Int64(mid)), .text(UUID().uuidString),
+                      .text(rowName), .text(uuid),
+                      .integer(Int64(idx)), .blob(data)])
+        }
+        try updateVersion(uuid: uuid,
+                          columns: ["hasAdjustments": .integer(1)],
+                          plistKeys: ["hasAdjustments": true, "hasEnabledAdjustments": true],
+                          iptcStarRating: nil)
+    }
+
     /// Removes OpenLens-native adjustments from a version.
     public func clearOLAdjustments(forVersion uuid: String) throws {
         guard allowWrites else { throw WriteError.writesNotAllowed }
