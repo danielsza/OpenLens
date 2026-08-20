@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 import OpenLensKit
 
 struct ContentView: View {
-    @StateObject private var store = LibraryStore()
+    @ObservedObject var store: LibraryStore
     @State private var didAutoOpen = false
     @State private var showExport = false
     @State private var showSlideshow = false
@@ -19,7 +19,7 @@ struct ContentView: View {
             .background(photoEventHandlers)
             .background(smartAlbumHandler)
             .background(sheets)
-            .onAppear { store.loadSmartAlbums(); autoOpenIfNeeded() }
+            .onAppear { store.loadSmartAlbums(); store.loadKnownLibraries(); autoOpenIfNeeded() }
     }
 
     private var smartAlbumHandler: some View {
@@ -51,7 +51,7 @@ struct ContentView: View {
         .toolbar { toolbarContent }
         .overlay {
             if store.library == nil {
-                ContentUnavailablePlaceholder(action: openLibrary)
+                ContentUnavailablePlaceholder(store: store)
             }
         }
         .overlay(alignment: .bottom) {
@@ -72,9 +72,6 @@ struct ContentView: View {
     /// the type-checker handles the long chain quickly.
     private var eventHandlers: some View {
         Color.clear
-            .onReceive(NotificationCenter.default.publisher(for: .openLibraryRequested)) { _ in openLibrary() }
-            .onReceive(NotificationCenter.default.publisher(for: .newLibraryRequested)) { _ in newLibrary() }
-            .onReceive(NotificationCenter.default.publisher(for: .closeLibraryRequested)) { _ in store.closeLibrary() }
             .onReceive(NotificationCenter.default.publisher(for: .exportRequested)) { _ in
                 if store.library != nil { showExport = true }
             }
@@ -325,11 +322,11 @@ struct ContentView: View {
     private func autoOpenIfNeeded() {
         guard !didAutoOpen else { return }
         didAutoOpen = true
+        // Aperture behaviour: open the last library on launch; holding Option
+        // (or having no last library) lands on the library chooser instead.
         let optionDown = NSEvent.modifierFlags.contains(.option)
-        if optionDown {
-            openLibrary()
-        } else if !store.openLastIfAvailable() {
-            openLibrary()
+        if !optionDown {
+            _ = store.openLastIfAvailable()
         }
     }
 
@@ -470,44 +467,54 @@ struct ContentView: View {
         return value.isEmpty ? nil : value
     }
 
-    private func newLibrary() {
-        let panel = NSSavePanel()
-        panel.nameFieldStringValue = "Untitled.aplibrary"
-        panel.message = "Choose where to create the new library"
-        panel.prompt = "Create"
-        guard panel.runModal() == .OK, var url = panel.url else { return }
-        if url.pathExtension != "aplibrary" {
-            url.deletePathExtension()
-            url.appendPathExtension("aplibrary")
-        }
-        do {
-            _ = try ApertureLibraryCreator.createLibrary(at: url, firstProjectNamed: "Untitled Project")
-            store.open(url: url)
-        } catch {
-            store.errorMessage = "Couldn't create library: \(error)"
-        }
-    }
-
-    private func openLibrary() {
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = true
-        panel.message = "Choose an Aperture library (.aplibrary)"
-        if panel.runModal() == .OK, let url = panel.url {
-            store.open(url: url)
-        }
-    }
+    private func newLibrary() { store.newLibraryPanel() }
+    private func openLibrary() { store.openLibraryPanel() }
 }
 
-/// Placeholder shown before a library is opened.
+/// Aperture-style library chooser shown when no library is open: lists known
+/// libraries plus "Other…" and "New" options.
 struct ContentUnavailablePlaceholder: View {
-    let action: () -> Void
+    @ObservedObject var store: LibraryStore
+
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 14) {
             Image(systemName: "photo.on.rectangle.angled")
                 .font(.system(size: 48)).foregroundStyle(Theme.textSecondary)
-            Text("No library open").font(.title2).foregroundStyle(Theme.textPrimary)
-            Button("Open Library…", action: action)
+            Text("Choose a Library").font(.title2).foregroundStyle(Theme.textPrimary)
+
+            if !store.knownLibraries.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(store.knownLibraries, id: \.path) { url in
+                        Button {
+                            store.open(url: url)
+                        } label: {
+                            HStack {
+                                Image(systemName: "photo.stack")
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(url.deletingPathExtension().lastPathComponent)
+                                        .fontWeight(.medium)
+                                    Text(url.deletingLastPathComponent().path)
+                                        .font(.caption2).foregroundStyle(.secondary)
+                                        .lineLimit(1).truncationMode(.middle)
+                                }
+                                Spacer()
+                            }
+                            .contentShape(Rectangle())
+                            .padding(.horizontal, 10).padding(.vertical, 6)
+                        }
+                        .buttonStyle(.plain)
+                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.black.opacity(0.12)))
+                    }
+                }
+                .frame(maxWidth: 380)
+            }
+
+            HStack(spacing: 10) {
+                Button("Other Library…") { store.openLibraryPanel() }
+                Button("New Library…") { store.newLibraryPanel() }
+            }
+            Text("Tip: hold Option at launch to land here instead of the last library.")
+                .font(.caption2).foregroundStyle(Theme.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.appBackground)

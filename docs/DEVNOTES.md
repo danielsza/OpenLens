@@ -86,6 +86,19 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
   (writer.setOLLocalAdjustments). Viewer honours liveLayers override; session
   resets on photo change.
 
+- **2026-07-24** **Library lifecycle fixed + Aperture-style library list**:
+  BUG — File menu library actions were NotificationCenter → ContentView, so
+  with all windows closed (⌘W) nothing listened. Fix: LibraryStore lifted to
+  the App (@StateObject in OpenLensApp, passed to ContentView as
+  @ObservedObject); `LibraryCommands: Commands` struct calls the store
+  directly and uses @Environment(\.openWindow) + WindowGroup(id:"main") to
+  reopen the window (`ensureWindow()`). Known-libraries list (UserDefaults
+  "OpenLens.knownLibraryPaths", 12 max, pruned, lazily loaded — remember()
+  loads first so it never clobbers history): File ▸ Switch to Library
+  submenu (✓ marks current) + placeholder is now a full chooser (list +
+  Other/New). Launch: auto-opens last library; Option at launch lands on the
+  chooser (no more forced panel).
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)

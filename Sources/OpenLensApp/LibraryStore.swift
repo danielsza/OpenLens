@@ -499,8 +499,68 @@ final class LibraryStore: ObservableObject {
             self.selectedSource = nil
             self.errorMessage = nil
             UserDefaults.standard.set(url.path, forKey: lastLibraryKey)
+            rememberLibrary(url)
         } catch {
             self.errorMessage = "\(error)"
+        }
+    }
+
+    // MARK: - Known libraries (Aperture-style library list)
+
+    private let knownLibrariesKey = "OpenLens.knownLibraryPaths"
+
+    /// Recently used libraries (most recent first), pruned of missing files.
+    /// Loaded lazily on first access so the Switch-to-Library menu is
+    /// populated even before any window has appeared.
+    @Published var knownLibraries: [URL] = []
+    private var loadedKnownLibraries = false
+
+    func loadKnownLibraries() {
+        guard !loadedKnownLibraries else { return }
+        loadedKnownLibraries = true
+        let paths = UserDefaults.standard.stringArray(forKey: knownLibrariesKey) ?? []
+        knownLibraries = paths.map { URL(fileURLWithPath: $0) }
+            .filter { FileManager.default.fileExists(atPath: $0.path) }
+    }
+
+    private func rememberLibrary(_ url: URL) {
+        loadKnownLibraries()   // don't clobber saved history on first open
+        var list = knownLibraries.filter { $0.path != url.path }
+        list.insert(url, at: 0)
+        if list.count > 12 { list = Array(list.prefix(12)) }
+        knownLibraries = list
+        UserDefaults.standard.set(list.map(\.path), forKey: knownLibrariesKey)
+    }
+
+    /// Shows the open panel and opens the chosen library. Safe to call with
+    /// no window open (used directly by the File menu).
+    func openLibraryPanel() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.message = "Choose an Aperture library (.aplibrary)"
+        if panel.runModal() == .OK, let url = panel.url {
+            open(url: url)
+        }
+    }
+
+    /// Shows the save panel and creates + opens a new library.
+    func newLibraryPanel() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "Untitled.aplibrary"
+        panel.message = "Choose where to create the new library"
+        panel.prompt = "Create"
+        guard panel.runModal() == .OK, var url = panel.url else { return }
+        if url.pathExtension != "aplibrary" {
+            url.deletePathExtension()
+            url.appendPathExtension("aplibrary")
+        }
+        do {
+            _ = try ApertureLibraryCreator.createLibrary(at: url, firstProjectNamed: "Untitled Project")
+            open(url: url)
+        } catch {
+            errorMessage = "Couldn't create library: \(error)"
         }
     }
 

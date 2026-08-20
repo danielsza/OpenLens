@@ -13,6 +13,8 @@ final class UpdaterModel: ObservableObject {
 @main
 struct OpenLensApp: App {
     @StateObject private var updater = UpdaterModel()
+    // App-owned so the File menu works even with every window closed.
+    @StateObject private var store = LibraryStore()
 
     init() {
         // When run as a Swift Package executable (swift run OpenLensApp),
@@ -22,11 +24,12 @@ struct OpenLensApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("OpenLens") {
-            ContentView()
+        WindowGroup("OpenLens", id: "main") {
+            ContentView(store: store)
                 .frame(minWidth: 900, minHeight: 600)
         }
         .commands {
+            LibraryCommands(store: store)
             // Replace the About group so both items reliably render in the
             // app menu (the `after: .appInfo` insertion doesn't show for
             // SPM-built apps).
@@ -38,19 +41,7 @@ struct OpenLensApp: App {
                     updater.controller.checkForUpdates(nil)
                 }
             }
-            CommandGroup(replacing: .newItem) {
-                Button("New Library…") {
-                    NotificationCenter.default.post(name: .newLibraryRequested, object: nil)
-                }
-                .keyboardShortcut("n")
-                Button("Open / Switch Library…") {
-                    NotificationCenter.default.post(name: .openLibraryRequested, object: nil)
-                }
-                .keyboardShortcut("o")
-                Button("Close Library") {
-                    NotificationCenter.default.post(name: .closeLibraryRequested, object: nil)
-                }
-                .keyboardShortcut("w", modifiers: [.command, .shift])
+            CommandGroup(after: .newItem) {
                 Divider()
                 Button("Export…") {
                     NotificationCenter.default.post(name: .exportRequested, object: nil)
@@ -124,6 +115,58 @@ struct OpenLensApp: App {
                 }
             }
         }
+    }
+}
+
+/// The library-lifecycle File-menu items. These talk to the app-owned store
+/// directly (NOT via window notifications) so they keep working after every
+/// window is closed — and reopen the main window when needed.
+struct LibraryCommands: Commands {
+    @ObservedObject var store: LibraryStore
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some Commands {
+        CommandGroup(replacing: .newItem) {
+            Button("New Library…") {
+                ensureWindow()
+                store.newLibraryPanel()
+            }
+            .keyboardShortcut("n")
+
+            Button("Open Library…") {
+                ensureWindow()
+                store.openLibraryPanel()
+            }
+            .keyboardShortcut("o")
+
+            Menu("Switch to Library") {
+                if store.knownLibraries.isEmpty {
+                    Button("No Known Libraries") {}.disabled(true)
+                }
+                ForEach(store.knownLibraries, id: \.path) { url in
+                    Button(libraryTitle(url)) {
+                        ensureWindow()
+                        store.open(url: url)
+                    }
+                }
+            }
+
+            Button("Close Library") { store.closeLibrary() }
+                .keyboardShortcut("w", modifiers: [.command, .shift])
+        }
+    }
+
+    private func libraryTitle(_ url: URL) -> String {
+        let name = url.deletingPathExtension().lastPathComponent
+        let isCurrent = store.library?.url.path == url.path
+        return isCurrent ? "\(name) ✓" : name
+    }
+
+    private func ensureWindow() {
+        if !NSApp.windows.contains(where: { $0.isVisible && $0.canBecomeMain }) {
+            openWindow(id: "main")
+        }
+        NSApp.activate(ignoringOtherApps: true)
     }
 }
 
