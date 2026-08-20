@@ -122,6 +122,9 @@ struct ContentView: View {
             .sheet(isPresented: $showPlaces) { PlacesMapView(store: store, isPresented: $showPlaces) }
             .sheet(isPresented: $showDuplicates) { DuplicatesView(store: store, isPresented: $showDuplicates) }
             .sheet(isPresented: $showCompare) { CompareView(store: store, isPresented: $showCompare) }
+            .sheet(isPresented: $store.showLibraryChooser) {
+                LibraryChooserView(store: store, embedded: false)
+            }
     }
 
     /// Prints the selected photo (full resolution, aspect-fit to page).
@@ -471,52 +474,20 @@ struct ContentView: View {
     private func openLibrary() { store.openLibraryPanel() }
 }
 
-/// Aperture-style library chooser shown when no library is open: lists known
-/// libraries plus "Other…" and "New" options.
+/// Empty-window state: shows the Aperture/Photos-style Choose Library dialog
+/// as a centred card.
 struct ContentUnavailablePlaceholder: View {
     @ObservedObject var store: LibraryStore
 
     var body: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "photo.on.rectangle.angled")
-                .font(.system(size: 48)).foregroundStyle(Theme.textSecondary)
-            Text("Choose a Library").font(.title2).foregroundStyle(Theme.textPrimary)
-
-            if !store.knownLibraries.isEmpty {
-                VStack(alignment: .leading, spacing: 2) {
-                    ForEach(store.knownLibraries, id: \.path) { url in
-                        Button {
-                            store.open(url: url)
-                        } label: {
-                            HStack {
-                                Image(systemName: "photo.stack")
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(url.deletingPathExtension().lastPathComponent)
-                                        .fontWeight(.medium)
-                                    Text(url.deletingLastPathComponent().path)
-                                        .font(.caption2).foregroundStyle(.secondary)
-                                        .lineLimit(1).truncationMode(.middle)
-                                }
-                                Spacer()
-                            }
-                            .contentShape(Rectangle())
-                            .padding(.horizontal, 10).padding(.vertical, 6)
-                        }
-                        .buttonStyle(.plain)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.black.opacity(0.12)))
-                    }
-                }
-                .frame(maxWidth: 380)
-            }
-
-            HStack(spacing: 10) {
-                Button("Other Library…") { store.openLibraryPanel() }
-                Button("New Library…") { store.newLibraryPanel() }
-            }
-            Text("Tip: hold Option at launch to land here instead of the last library.")
-                .font(.caption2).foregroundStyle(Theme.textSecondary)
+        ZStack {
+            Theme.appBackground
+            LibraryChooserView(store: store, embedded: true)
+                .background(RoundedRectangle(cornerRadius: 10).fill(Theme.panel))
+                .overlay(RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(Color.black.opacity(0.25)))
+                .shadow(radius: 14)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.appBackground)
     }
 }

@@ -99,6 +99,13 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
   Other/New). Launch: auto-opens last library; Option at launch lands on the
   chooser (no more forced panel).
 
+- **2026-07-24** Choose Library dialog rebuilt to match the real Photos/
+  Aperture one (Daniel's screenshot): app icon + blurb, bordered accent-
+  rimmed selectable list with "(Last Opened)"/"(Open)" annotations and
+  alternating rows, selected path readout, Other Library… / Create New… /
+  Choose Library buttons. Same view embedded (empty window) and as sheet.
+  ⌘O = Open LAST library; ⌥⌘O = chooser (matches Aperture's Option-launch).
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)

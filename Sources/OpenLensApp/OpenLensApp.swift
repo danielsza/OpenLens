@@ -133,11 +133,21 @@ struct LibraryCommands: Commands {
             }
             .keyboardShortcut("n")
 
-            Button("Open Library…") {
+            // ⌘O = open the last library (Aperture behaviour);
+            // ⌥⌘O = the Choose Library dialog.
+            Button("Open Last Library") {
                 ensureWindow()
-                store.openLibraryPanel()
+                if store.library == nil, !store.openLastIfAvailable() {
+                    store.showLibraryChooser = true
+                }
             }
             .keyboardShortcut("o")
+
+            Button("Choose Library…") {
+                ensureWindow()
+                store.showLibraryChooser = true
+            }
+            .keyboardShortcut("o", modifiers: [.command, .option])
 
             Menu("Switch to Library") {
                 if store.knownLibraries.isEmpty {

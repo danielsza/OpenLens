@@ -509,6 +509,9 @@ final class LibraryStore: ObservableObject {
 
     private let knownLibrariesKey = "OpenLens.knownLibraryPaths"
 
+    /// Presents the Aperture/Photos-style "Choose Library" dialog (⌥⌘O).
+    @Published var showLibraryChooser = false
+
     /// Recently used libraries (most recent first), pruned of missing files.
     /// Loaded lazily on first access so the Switch-to-Library menu is
     /// populated even before any window has appeared.
