@@ -513,8 +513,7 @@ public final class ApertureLibraryWriter {
         // Best-effort: author a Version-N.apversion for the duplicate (copy of
         // the source's, with its own uuid/number) so plist-backed edits like
         // rotation and IPTC keep working on duplicates.
-        if let srcPlist = try? locateVersionPlist(forVersionUuid: uuid, using: db),
-           let src = srcPlist,
+        if let src = try? locateVersionPlist(forVersionUuid: uuid, using: db),
            let data = try? Data(contentsOf: src),
            var plist = try? PropertyListSerialization.propertyList(
                from: data, options: [], format: nil) as? [String: Any] {
