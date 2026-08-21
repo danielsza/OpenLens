@@ -58,19 +58,21 @@ struct CompareView: View {
 
     private func pane(image: NSImage?, title: String) -> some View {
         VStack(spacing: 4) {
-            GeometryReader { _ in
+            GeometryReader { geo in
                 ZStack {
                     Color(white: 0.12)
                     if let image {
                         Image(nsImage: image)
                             .resizable()
                             .scaledToFit()
+                            .frame(width: geo.size.width, height: geo.size.height)
                             .scaleEffect(zoom)
                             .offset(offset)
                     } else {
                         ProgressView()
                     }
                 }
+                .frame(width: geo.size.width, height: geo.size.height)
                 .clipped()
             }
             Text(title).font(.caption2).foregroundStyle(.secondary).padding(.bottom, 4)

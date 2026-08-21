@@ -119,6 +119,14 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
   visible; View menu gains "Adjustments HUD" (H) + "Brush Local Adjustments"
   (P). ImageViewer 'h'/'p' hidden shortcuts still work.
 
+- **2026-07-24** Daniel's test sweep: Compare panes now centre images (frame
+  the fitted image to the pane; GeometryReader was top-anchoring); Print
+  prints ALL selected photos one-per-page (tall container view + automatic
+  vertical pagination; single photo keeps auto-orientation); F now ALSO
+  toggles real NSWindow fullScreen (and Esc exits both). Note: Compare is a
+  modal sheet, so the adjustments panel is intentionally disabled while it's
+  open (close with Done).
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)

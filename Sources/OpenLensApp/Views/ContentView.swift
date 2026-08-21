@@ -127,21 +127,48 @@ struct ContentView: View {
             }
     }
 
-    /// Prints the selected photo (full resolution, aspect-fit to page).
+    /// Prints ALL selected photos, one per page (aspect-fit).
     private func printSelected() {
-        guard let lib = store.library, let photo = store.selectedPhoto else { return }
+        guard let lib = store.library else { return }
+        let ids = store.selectedPhotoIDs.isEmpty
+            ? [store.selectedPhotoID].compactMap { $0 }
+            : Array(store.selectedPhotoIDs)
+        let photos = store.visiblePhotos.filter { ids.contains($0.id) }
+        guard !photos.isEmpty else { return }
         Task {
-            guard let image = await ImageCache.shared.fullImage(for: photo, in: lib) else { return }
+            var images: [NSImage] = []
+            for photo in photos {
+                if let image = await ImageCache.shared.fullImage(for: photo, in: lib) {
+                    images.append(image)
+                }
+            }
+            guard !images.isEmpty else { return }
             await MainActor.run {
-                let imageView = NSImageView(image: image)
-                imageView.imageScaling = .scaleProportionallyUpOrDown
                 let info = NSPrintInfo.shared
                 info.horizontalPagination = .fit
-                info.verticalPagination = .fit
-                info.orientation = image.size.width >= image.size.height ? .landscape : .portrait
-                imageView.frame = NSRect(origin: .zero, size: info.imageablePageBounds.size)
-                let op = NSPrintOperation(view: imageView, printInfo: info)
-                op.jobTitle = photo.version.name
+                info.verticalPagination = .automatic
+                if images.count == 1 {
+                    info.orientation = images[0].size.width >= images[0].size.height
+                        ? .landscape : .portrait
+                }
+                let page = info.imageablePageBounds.size
+                // One image per page: a tall container that AppKit paginates.
+                let container = NSView(frame: NSRect(
+                    x: 0, y: 0, width: page.width,
+                    height: page.height * CGFloat(images.count)))
+                for (index, image) in images.enumerated() {
+                    let view = NSImageView(image: image)
+                    view.imageScaling = .scaleProportionallyUpOrDown
+                    view.frame = NSRect(
+                        x: 0,
+                        y: page.height * CGFloat(images.count - 1 - index),
+                        width: page.width, height: page.height)
+                    container.addSubview(view)
+                }
+                let op = NSPrintOperation(view: container, printInfo: info)
+                op.jobTitle = photos.count == 1
+                    ? photos[0].version.name
+                    : "\(photos.count) photos"
                 op.run()
             }
         }
@@ -191,9 +218,9 @@ struct ContentView: View {
             Button("") { store.setRatingForSelection(-1) }
                 .keyboardShortcut("9", modifiers: [])
             // F = full-screen editing mode (Aperture muscle memory); Esc exits.
-            Button("") { store.fullScreenMode.toggle() }
+            Button("") { toggleFullScreenMode() }
                 .keyboardShortcut("f", modifiers: [])
-            Button("") { if store.fullScreenMode { store.fullScreenMode = false } }
+            Button("") { if store.fullScreenMode { toggleFullScreenMode() } }
                 .keyboardShortcut(.escape, modifiers: [])
         }
         .opacity(0)
@@ -322,6 +349,17 @@ struct ContentView: View {
 
     /// On launch: open the last-used library automatically. Hold Option to get
     /// the chooser instead; if there's no prior library, show the open dialog.
+    /// F-mode = hide panels AND take the window into real macOS full screen
+    /// (and back out on exit).
+    private func toggleFullScreenMode() {
+        store.fullScreenMode.toggle()
+        let window = NSApp.keyWindow ?? NSApp.windows.first { $0.isVisible && $0.canBecomeMain }
+        let isFullScreen = window?.styleMask.contains(.fullScreen) ?? false
+        if store.fullScreenMode != isFullScreen {
+            window?.toggleFullScreen(nil)
+        }
+    }
+
     private func autoOpenIfNeeded() {
         guard !didAutoOpen else { return }
         didAutoOpen = true
