@@ -113,6 +113,12 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
   value column widened (was wrapping "-66.18"). Histogram v4: NORMAL-blend
   fills 0.22 (additive fills went khaki) + solid contour lines.
 
+- **2026-07-24** Discoverability: control-bar icon buttons now show an INLINE
+  hover hint text (macOS .help tooltips weren't appearing for Daniel);
+  toggling HUD/brush from Grid auto-switches to Split so the effect is
+  visible; View menu gains "Adjustments HUD" (H) + "Brush Local Adjustments"
+  (P). ImageViewer 'h'/'p' hidden shortcuts still work.
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)

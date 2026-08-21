@@ -77,10 +77,19 @@ final class LibraryStore: ObservableObject {
 
     func toggleBrushMode() {
         brushMode.toggle()
-        if brushMode, liveLayers == nil, let photo = selectedPhoto, let lib = library {
-            liveLayers = lib.olLocalAdjustments(for: photo)
-            if let params = liveLayers?.first?.params { brushParams = params }
+        if brushMode {
+            // Painting happens on the big viewer — make sure it's visible.
+            if viewMode == .grid { viewMode = .split }
+            if liveLayers == nil, let photo = selectedPhoto, let lib = library {
+                liveLayers = lib.olLocalAdjustments(for: photo)
+                if let params = liveLayers?.first?.params { brushParams = params }
+            }
         }
+    }
+
+    func toggleAdjustmentsHUD() {
+        showAdjustmentsHUD.toggle()
+        if showAdjustmentsHUD, viewMode == .grid { viewMode = .split }
     }
 
     /// Appends a finished stroke to the working layer and re-renders.

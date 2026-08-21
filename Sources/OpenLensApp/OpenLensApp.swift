@@ -58,6 +58,11 @@ struct OpenLensApp: App {
             // create a duplicate second "View" menu).
             CommandGroup(after: .sidebar) {
                 Divider()
+                Button("Adjustments HUD") { store.toggleAdjustmentsHUD() }
+                    .keyboardShortcut("h", modifiers: [])
+                Button("Brush Local Adjustments") { store.toggleBrushMode() }
+                    .keyboardShortcut("p", modifiers: [])
+                Divider()
                 Button("Start Slideshow") {
                     NotificationCenter.default.post(name: .slideshowRequested, object: nil)
                 }

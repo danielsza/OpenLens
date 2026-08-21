@@ -6,6 +6,8 @@ import OpenLensKit
 /// In Split view it sits directly under the viewer, above the filmstrip.
 struct ControlBar: View {
     @ObservedObject var store: LibraryStore
+    /// Inline hover hint (macOS tooltips proved unreliable here).
+    @State private var hint: String?
 
     var body: some View {
         ZStack {
@@ -23,14 +25,23 @@ struct ControlBar: View {
                 }
                 Spacer()
 
+                if let hint {
+                    Text(hint)
+                        .font(.caption2)
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+
                 Button {
-                    store.showAdjustmentsHUD.toggle()
+                    store.toggleAdjustmentsHUD()
                 } label: {
                     Image(systemName: "slider.horizontal.3")
                         .foregroundStyle(store.showAdjustmentsHUD ? Color.accentColor : Theme.textSecondary)
                 }
                 .buttonStyle(.plain)
                 .help("Adjustments HUD (H)")
+                .onHover { hint = $0 ? "Adjustments HUD (H)" : nil }
 
                 Button {
                     store.toggleBrushMode()
@@ -40,6 +51,7 @@ struct ControlBar: View {
                 }
                 .buttonStyle(.plain)
                 .help("Brush local adjustments (P)")
+                .onHover { hint = $0 ? "Brush — paint local adjustments (P)" : nil }
 
                 if store.viewerFocused && store.selectedPhoto != nil {
                     // Viewer is focused: the slider zooms the big image.
@@ -52,6 +64,7 @@ struct ControlBar: View {
                         Image(systemName: "plus.magnifyingglass").font(.system(size: 13))
                             .foregroundStyle(Color.accentColor)
                     }
+                    .onHover { hint = $0 ? "Zoom the photo (double-click to reset)" : nil }
                 } else {
                     HStack(spacing: 6) {
                         Image(systemName: "photo").font(.system(size: 9))
@@ -62,6 +75,7 @@ struct ControlBar: View {
                         Image(systemName: "photo").font(.system(size: 14))
                             .foregroundStyle(Theme.textSecondary)
                     }
+                    .onHover { hint = $0 ? "Thumbnail size — click the photo to zoom instead" : nil }
                 }
             }
 
