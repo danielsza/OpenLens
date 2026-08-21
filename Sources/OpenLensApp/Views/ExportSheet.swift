@@ -76,7 +76,7 @@ struct ExportSheet: View {
                             Text("\(Int(quality * 100))%").monospacedDigit().frame(width: 42)
                         }
                     }
-                    TextField("Resolution (DPI, optional)", text: $dpiText)
+                    TextField("DPI (optional)", text: $dpiText)
                     Picker("Subfolder", selection: $subfolderMode) {
                         Text("None").tag("none")
                         Text("Project Name").tag("project")
@@ -88,18 +88,18 @@ struct ExportSheet: View {
                         Text("Photos go into a folder named after each photo's project (e.g. “Wedding1/”).")
                             .font(.caption2).foregroundStyle(.secondary)
                     }
-                    TextField("Rename to (e.g. Wedding → Wedding 001.jpg)", text: $customName)
+                    TextField("Rename to", text: $customName, prompt: Text("e.g. Wedding"))
                     if !customName.trimmingCharacters(in: .whitespaces).isEmpty {
                         let ext = format == .jpeg ? "jpg" : format.rawValue
                         Text("Files will be named “\(customName.trimmingCharacters(in: .whitespaces)) 001.\(ext)”, numbered in order.")
                             .font(.caption2).foregroundStyle(.secondary)
                     }
-                    TextField("Add to file name (e.g. _web)", text: $nameSuffix)
+                    TextField("Suffix", text: $nameSuffix, prompt: Text("e.g. _web"))
                     Toggle("Include EXIF/IPTC metadata", isOn: $preserveMetadata)
 
                     Divider()
                     Text("Watermark").font(.headline)
-                    TextField("Text (leave blank for none)", text: $watermarkText)
+                    TextField("Watermark text", text: $watermarkText, prompt: Text("leave blank for none"))
                     HStack {
                         Text("Logo")
                         if let url = logoURL {
@@ -144,7 +144,7 @@ struct ExportSheet: View {
             }
         }
         .padding(20)
-        .frame(width: 440)
+        .frame(width: 540)
     }
 
     private func photosToExport() -> [Photo] {
@@ -168,6 +168,14 @@ struct ExportSheet: View {
 
     private func runExport() {
         guard let lib = store.library else { return }
+        // What you see is what exports: persist any unsaved adjustments/brush
+        // layers on the selected photo before rendering.
+        if store.adjustmentsDirty, let photo = store.selectedPhoto {
+            store.saveAdjustments(store.editParams, for: photo)
+        }
+        if store.liveLayers != nil {
+            store.saveBrushLayers()
+        }
         let photos = photosToExport()
         guard !photos.isEmpty else { return }
 
