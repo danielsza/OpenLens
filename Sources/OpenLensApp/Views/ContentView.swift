@@ -72,6 +72,15 @@ struct ContentView: View {
     /// the type-checker handles the long chain quickly.
     private var eventHandlers: some View {
         Color.clear
+            .onReceive(NotificationCenter.default.publisher(for: .importPhotosRequested)) { _ in
+                if store.library != nil { importPhotos() }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .importReferencedRequested)) { _ in
+                if store.library != nil { importPhotos(referenced: true) }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .importFolderRequested)) { _ in
+                if store.library != nil { importFolderTree() }
+            }
             .onReceive(NotificationCenter.default.publisher(for: .exportRequested)) { _ in
                 if store.library != nil { showExport = true }
             }

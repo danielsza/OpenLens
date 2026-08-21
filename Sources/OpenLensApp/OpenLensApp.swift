@@ -43,6 +43,17 @@ struct OpenLensApp: App {
             }
             CommandGroup(after: .newItem) {
                 Divider()
+                Button("Import Photos…") {
+                    NotificationCenter.default.post(name: .importPhotosRequested, object: nil)
+                }
+                .keyboardShortcut("i", modifiers: [.command, .shift])
+                Button("Import as Referenced (keep in place)…") {
+                    NotificationCenter.default.post(name: .importReferencedRequested, object: nil)
+                }
+                Button("Import Folder as Projects…") {
+                    NotificationCenter.default.post(name: .importFolderRequested, object: nil)
+                }
+                Divider()
                 Button("Export…") {
                     NotificationCenter.default.post(name: .exportRequested, object: nil)
                 }
@@ -204,5 +215,8 @@ extension Notification.Name {
     static let compareRequested = Notification.Name("compareRequested")
     static let printRequested = Notification.Name("printRequested")
     static let openLibraryRequested = Notification.Name("openLibraryRequested")
+    static let importPhotosRequested = Notification.Name("importPhotosRequested")
+    static let importReferencedRequested = Notification.Name("importReferencedRequested")
+    static let importFolderRequested = Notification.Name("importFolderRequested")
     static let closeLibraryRequested = Notification.Name("closeLibraryRequested")
 }
