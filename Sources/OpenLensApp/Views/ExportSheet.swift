@@ -22,6 +22,8 @@ struct ExportSheet: View {
     @AppStorage("export.wmPos") private var positionRaw = Watermark.Position.bottomCenter.rawValue
     @AppStorage("export.wmOpacity") private var watermarkOpacity = 0.5
     @AppStorage("export.selectionOnly") private var selectionOnly = true
+    @AppStorage("export.subfolderMode") private var subfolderMode = "none"  // none|project|custom
+    @AppStorage("export.subfolderName") private var subfolderName = ""
 
     private var format: ExportSettings.Format { .init(rawValue: formatRaw) ?? .jpeg }
     private var formatBinding: Binding<ExportSettings.Format> {
@@ -75,6 +77,17 @@ struct ExportSheet: View {
                         }
                     }
                     TextField("Resolution (DPI, optional)", text: $dpiText)
+                    Picker("Subfolder", selection: $subfolderMode) {
+                        Text("None").tag("none")
+                        Text("Project Name").tag("project")
+                        Text("Custom").tag("custom")
+                    }
+                    if subfolderMode == "custom" {
+                        TextField("Subfolder name", text: $subfolderName)
+                    } else if subfolderMode == "project" {
+                        Text("Photos go into a folder named after each photo's project (e.g. “Wedding1/”).")
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
                     TextField("Rename to (e.g. Wedding → Wedding 001.jpg)", text: $customName)
                     if !customName.trimmingCharacters(in: .whitespaces).isEmpty {
                         let ext = format == .jpeg ? "jpg" : format.rawValue
@@ -181,10 +194,37 @@ struct ExportSheet: View {
             customName: customName.trimmingCharacters(in: .whitespaces),
             preserveMetadata: preserveMetadata)
 
-        let result = Exporter(library: lib).exportBatch(photos, to: dest, settings: settings)
-        isPresented = false
-        if !result.failures.isEmpty {
-            store.errorMessage = "\(result.failures.count) of \(photos.count) photo(s) failed to export."
+        // Optional subfolder (Aperture's "Subfolder Format"): per-project or a
+        // fixed custom name inside the chosen destination.
+        func folder(for photo: Photo) -> URL {
+            switch subfolderMode {
+            case "project":
+                let name = store.projects.first { $0.id == photo.version.projectUuid }?.name
+                    ?? "Untitled Project"
+                return dest.appendingPathComponent(sanitized(name))
+            case "custom":
+                let name = subfolderName.trimmingCharacters(in: .whitespaces)
+                return name.isEmpty ? dest : dest.appendingPathComponent(sanitized(name))
+            default:
+                return dest
+            }
         }
+        let exporter = Exporter(library: lib)
+        var failureCount = 0
+        // Group by destination folder so sequence numbering restarts per folder.
+        let groups = Dictionary(grouping: photos, by: { folder(for: $0).path })
+        for (_, group) in groups.sorted(by: { $0.key < $1.key }) {
+            let result = exporter.exportBatch(group, to: folder(for: group[0]), settings: settings)
+            failureCount += result.failures.count
+        }
+        isPresented = false
+        if failureCount > 0 {
+            store.errorMessage = "\(failureCount) of \(photos.count) photo(s) failed to export."
+        }
+    }
+
+    private func sanitized(_ name: String) -> String {
+        name.replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: ":", with: "-")
     }
 }

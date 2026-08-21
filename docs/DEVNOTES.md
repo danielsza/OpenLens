@@ -145,6 +145,10 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
   (ExportSettings.customName + sequenceIndex). Export dest panel already had
   canCreateDirectories.
 
+- **2026-08-21** Export subfolders (Aperture's "Subfolder Format"): None /
+  Project Name (per-photo project → sanitized folder) / Custom. Photos grouped
+  per folder; Custom-Name sequence numbering restarts per folder.
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)
