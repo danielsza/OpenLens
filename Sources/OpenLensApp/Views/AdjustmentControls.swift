@@ -30,14 +30,12 @@ struct RGBHistogramView: View {
     @ViewBuilder
     private func channel(_ values: [Int], _ color: Color, _ maxV: Int, _ size: CGSize) -> some View {
         let smoothed = Self.smooth(values)
-        // Soft translucent body, additively blended so overlaps mix subtly.
+        // Photos-style: subtle layered fills (NORMAL blending — additive fills
+        // turned the whole plot khaki) with a crisp contour line per channel.
         fillPath(smoothed, maxV, size, closed: true)
-            .fill(color.opacity(0.35))
-            .blendMode(.plusLighter)
-        // Crisp contour on top — this is what makes it read "sharp".
+            .fill(color.opacity(0.22))
         fillPath(smoothed, maxV, size, closed: false)
             .stroke(color, style: StrokeStyle(lineWidth: 1.2, lineJoin: .round))
-            .blendMode(.plusLighter)
     }
 
     private func fillPath(_ smoothed: [Double], _ maxV: Int, _ size: CGSize,
@@ -141,8 +139,19 @@ struct AdjustmentControls: View {
                 .controlSize(compact ? .small : .regular)
             }
             if !store.writesEnabled && store.adjustmentsDirty {
-                Text("Turn on “Save edits” in the toolbar to persist.")
-                    .font(.caption2).foregroundStyle(.orange)
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text("Saving is off — edits won't persist.")
+                        .font(.caption)
+                    Spacer()
+                    Button("Enable") { store.writesEnabled = true }
+                        .controlSize(.small)
+                }
+                .padding(8)
+                .background(RoundedRectangle(cornerRadius: 6).fill(Color.orange.opacity(0.18)))
+                .overlay(RoundedRectangle(cornerRadius: 6)
+                    .strokeBorder(Color.orange.opacity(0.5)))
             }
         }
     }
@@ -177,7 +186,9 @@ struct AdjustmentControls: View {
             Text(String(format: "%.2f", store.editParams[keyPath: keyPath]))
                 .font(.caption2).monospacedDigit()
                 .foregroundStyle(.secondary)
-                .frame(width: 32, alignment: .trailing)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .frame(width: 42, alignment: .trailing)
         }
     }
 }

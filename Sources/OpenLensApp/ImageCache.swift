@@ -18,6 +18,14 @@ final class ImageCache {
         "\(id)@\(maxPixel)" as NSString
     }
 
+    /// Decoded pre-adjustment viewer images (big; keep only a few) so live
+    /// slider changes skip the disk decode and just re-run Core Image.
+    private let baseCache: NSCache<NSString, CGImage> = {
+        let c = NSCache<NSString, CGImage>()
+        c.countLimit = 6
+        return c
+    }()
+
     /// A representative frame from a video file (~1s in).
     static func videoFrame(url: URL, maxPixel: Int) -> CGImage? {
         let asset = AVURLAsset(url: url)
@@ -96,21 +104,28 @@ final class ImageCache {
                 .first { $0.identifier == "RKRawDecodeOperation" }
             return rawOp.flatMap(RawFineTuning.init(from:)) ?? RawFineTuning()
         }()
-        let cg = await Task.detached(priority: .userInitiated) { () -> CGImage? in
-            var base: CGImage?
-            if let rawTuning {
+        // Cache the decoded PRE-adjustment base so slider drags only re-run
+        // the Core Image filters (fast) instead of re-decoding from disk.
+        let baseKey = ("base|\(photo.id)|\(url.path)|" +
+                       (rawTuning.map { "r\($0.boost)-\($0.sharpness ?? -1)" } ?? "std")) as NSString
+        let cachedBase = baseCache.object(forKey: baseKey)
+        let result = await Task.detached(priority: .userInitiated) { () -> (CGImage, CGImage)? in
+            var base: CGImage? = cachedBase
+            if base == nil, let rawTuning {
                 base = RawRenderer.render(at: url, tuning: rawTuning, maxPixelSize: 2400)
             }
             base = base ?? ImageLoader.cgImage(at: url, maxPixelSize: 2400)
-            guard var image = base else { return nil }
+            guard let decoded = base else { return nil }
+            var image = decoded
             if params != nil || !layers.isEmpty {
                 image = AdjustmentRenderer.applyStack(global: params ?? OLAdjustments(),
                                                       layers: layers, to: image,
                                                       masterPixelSize: masterSize)
             }
-            return ImageLoader.rotate(image, degrees: applyRotation)
+            return (decoded, ImageLoader.rotate(image, degrees: applyRotation))
         }.value
-        guard let cg else { return nil }
+        guard let (decodedBase, cg) = result else { return nil }
+        baseCache.setObject(decodedBase, forKey: baseKey)
         let image = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
         cache.setObject(image, forKey: k)
         return image

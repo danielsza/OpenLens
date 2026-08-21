@@ -390,19 +390,29 @@ struct ImageViewer: View {
     }
 
     private func load() async {
-        image = nil
-        faces = []
-        player?.pause()
-        player = nil
-        guard let lib = store.library, let photo = store.selectedPhoto else { return }
-        if photo.id != lastPhotoID {
+        guard let lib = store.library, let photo = store.selectedPhoto else {
+            image = nil; faces = []
+            player?.pause(); player = nil
+            lastPhotoID = nil
+            return
+        }
+        // Only blank the canvas when the PHOTO changes — for slider tweaks
+        // the previous frame stays up until the new render is ready, so
+        // adjustments feel live instead of "reloading".
+        let photoChanged = photo.id != lastPhotoID
+        if photoChanged {
             lastPhotoID = photo.id
+            image = nil
+            faces = []
+            player?.pause(); player = nil
             pan = .zero; panBase = .zero
         }
         if photo.master.isVideo {
-            let url = lib.masterFileURL(for: photo.master)
-            if FileManager.default.fileExists(atPath: url.path) {
-                player = AVPlayer(url: url)
+            if photoChanged {
+                let url = lib.masterFileURL(for: photo.master)
+                if FileManager.default.fileExists(atPath: url.path) {
+                    player = AVPlayer(url: url)
+                }
             }
             return
         }

@@ -106,6 +106,13 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
   Choose Library buttons. Same view embedded (empty window) and as sheet.
   ⌘O = Open LAST library; ⌥⌘O = chooser (matches Aperture's Option-launch).
 
+- **2026-07-24** Live sliders: viewer no longer blanks between renders (image
+  cleared only on PHOTO change) + ImageCache keeps a pre-adjustment BASE
+  CGImage cache so slider ticks only re-run CI filters, no disk re-decode.
+  Save-edits notice → readable orange callout with an Enable button. Slider
+  value column widened (was wrapping "-66.18"). Histogram v4: NORMAL-blend
+  fills 0.22 (additive fills went khaki) + solid contour lines.
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)
