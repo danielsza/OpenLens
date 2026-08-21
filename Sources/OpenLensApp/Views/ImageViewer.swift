@@ -21,6 +21,10 @@ struct ImageViewer: View {
     /// Crop-drag state (fitted-rect-local view coordinates).
     @State private var cropDragStart: CGPoint?
     @State private var cropDraft: CGRect?
+    @State private var cropDragMode: CropDragMode = .idle
+    @State private var cropAspectTag: String = "free"
+
+    private enum CropDragMode { case idle, new, move(offset: CGSize), resize(anchor: CGPoint) }
 
     private let loupeDiameter: CGFloat = 180
     /// Aperture offered 50%–1600%; step through with = / - while the loupe is on.
@@ -79,10 +83,48 @@ struct ImageViewer: View {
 
     // MARK: - Crop
 
-    /// Drag-to-crop overlay: dims outside the draft rect, thirds grid inside,
-    /// Apply/Cancel buttons underneath.
+    /// Aspect ratio (width/height) for the current preset; nil = freeform.
+    private func cropAspect(fitted: CGRect) -> CGFloat? {
+        switch cropAspectTag {
+        case "orig":
+            return fitted.height > 0 ? fitted.width / fitted.height : nil
+        case "1:1": return 1
+        case "2:3": return 2.0 / 3.0
+        case "3:2": return 3.0 / 2.0
+        case "4:5": return 4.0 / 5.0
+        case "5:4": return 5.0 / 4.0
+        case "16:9": return 16.0 / 9.0
+        default: return nil
+        }
+    }
+
+    private func constrainedRect(anchor: CGPoint, to point: CGPoint,
+                                 aspect: CGFloat?, bounds: CGSize) -> CGRect {
+        var w = abs(point.x - anchor.x)
+        var h = abs(point.y - anchor.y)
+        if let aspect, aspect > 0 { h = w / aspect }
+        let sx: CGFloat = point.x >= anchor.x ? 1 : -1
+        let sy: CGFloat = point.y >= anchor.y ? 1 : -1
+        var rect = CGRect(x: min(anchor.x, anchor.x + sx * w),
+                          y: min(anchor.y, anchor.y + sy * h),
+                          width: w, height: h)
+        rect = rect.intersection(CGRect(origin: .zero, size: bounds))
+        // Re-apply the aspect after clamping so the box never distorts.
+        if let aspect, aspect > 0, rect.height > 0, rect.width / rect.height != aspect {
+            w = min(rect.width, rect.height * aspect)
+            h = w / aspect
+            rect = CGRect(x: sx > 0 ? rect.minX : rect.maxX - w,
+                          y: sy > 0 ? rect.minY : rect.maxY - h,
+                          width: w, height: h)
+        }
+        return rect
+    }
+
+    /// Drag-to-crop overlay: aspect presets, adjustable box (drag corners to
+    /// resize, drag inside to move, drag outside to redraw), thirds grid.
     @ViewBuilder
     private func cropLayer(fitted: CGRect) -> some View {
+        let handleHit: CGFloat = 16
         ZStack(alignment: .topLeading) {
             // Dim everything outside the draft (even-odd fill).
             Path { p in
@@ -94,7 +136,6 @@ struct ImageViewer: View {
             if let r = cropDraft {
                 Path { p in
                     p.addRect(r)
-                    // Thirds grid.
                     for i in 1...2 {
                         let x = r.minX + r.width * CGFloat(i) / 3
                         p.move(to: CGPoint(x: x, y: r.minY)); p.addLine(to: CGPoint(x: x, y: r.maxY))
@@ -103,6 +144,15 @@ struct ImageViewer: View {
                     }
                 }
                 .stroke(Color.white.opacity(0.9), lineWidth: 1)
+                // Corner handles.
+                ForEach(0..<4, id: \.self) { i in
+                    let c = Self.corner(i, of: r)
+                    Rectangle()
+                        .fill(Color.white)
+                        .frame(width: 8, height: 8)
+                        .position(c)
+                        .allowsHitTesting(false)
+                }
             } else {
                 Text("Drag to select the crop area")
                     .font(.caption).foregroundStyle(.white)
@@ -115,18 +165,55 @@ struct ImageViewer: View {
         .gesture(
             DragGesture(minimumDistance: 2)
                 .onChanged { value in
-                    let start = cropDragStart ?? value.startLocation
-                    cropDragStart = start
-                    cropDraft = CGRect(x: min(start.x, value.location.x),
-                                       y: min(start.y, value.location.y),
-                                       width: abs(value.location.x - start.x),
-                                       height: abs(value.location.y - start.y))
+                    let aspect = cropAspect(fitted: fitted)
+                    if case .idle = cropDragMode {
+                        cropDragMode = Self.decideMode(start: value.startLocation,
+                                                       draft: cropDraft, hit: handleHit)
+                    }
+                    switch cropDragMode {
+                    case .idle: break
+                    case .new:
+                        cropDraft = constrainedRect(anchor: value.startLocation,
+                                                    to: value.location,
+                                                    aspect: aspect, bounds: fitted.size)
+                    case .resize(let anchor):
+                        cropDraft = constrainedRect(anchor: anchor, to: value.location,
+                                                    aspect: aspect, bounds: fitted.size)
+                    case .move(let offset):
+                        guard var r = cropDraft else { break }
+                        r.origin = CGPoint(
+                            x: min(max(0, value.location.x - offset.width),
+                                   fitted.width - r.width),
+                            y: min(max(0, value.location.y - offset.height),
+                                   fitted.height - r.height))
+                        cropDraft = r
+                    }
                 }
-                .onEnded { _ in cropDragStart = nil }
+                .onEnded { _ in cropDragMode = .idle }
         )
         .position(x: fitted.midX, y: fitted.midY)
         .overlay(alignment: .bottom) {
             HStack(spacing: 10) {
+                Picker("", selection: $cropAspectTag) {
+                    Text("Freeform").tag("free")
+                    Text("Original").tag("orig")
+                    Text("Square").tag("1:1")
+                    Text("2 : 3").tag("2:3")
+                    Text("3 : 2").tag("3:2")
+                    Text("4 : 5").tag("4:5")
+                    Text("5 : 4").tag("5:4")
+                    Text("16 : 9").tag("16:9")
+                }
+                .labelsHidden()
+                .frame(width: 110)
+                .onChange(of: cropAspectTag) { _, _ in
+                    // Snap the existing box to the new ratio around its centre.
+                    guard let r = cropDraft, let a = cropAspect(fitted: fitted) else { return }
+                    let w = min(r.width, r.height * a)
+                    let h = w / a
+                    cropDraft = CGRect(x: r.midX - w / 2, y: r.midY - h / 2, width: w, height: h)
+                        .intersection(CGRect(origin: .zero, size: fitted.size))
+                }
                 Button("Cancel") { exitCropMode() }
                 Button("Apply Crop") { applyCrop(fitted: fitted) }
                     .buttonStyle(.borderedProminent)
@@ -138,6 +225,31 @@ struct ImageViewer: View {
             .padding(.bottom, 26)
             .environment(\.colorScheme, .dark)
         }
+    }
+
+    private static func corner(_ index: Int, of r: CGRect) -> CGPoint {
+        switch index {
+        case 0: return CGPoint(x: r.minX, y: r.minY)
+        case 1: return CGPoint(x: r.maxX, y: r.minY)
+        case 2: return CGPoint(x: r.minX, y: r.maxY)
+        default: return CGPoint(x: r.maxX, y: r.maxY)
+        }
+    }
+
+    private static func decideMode(start: CGPoint, draft: CGRect?,
+                                   hit: CGFloat) -> CropDragMode {
+        guard let r = draft else { return .new }
+        // Corner resize? Anchor is the opposite corner.
+        for i in 0..<4 {
+            let c = corner(i, of: r)
+            if abs(c.x - start.x) < hit && abs(c.y - start.y) < hit {
+                return .resize(anchor: corner(3 - i, of: r))
+            }
+        }
+        if r.contains(start) {
+            return .move(offset: CGSize(width: start.x - r.minX, height: start.y - r.minY))
+        }
+        return .new
     }
 
     private func applyCrop(fitted: CGRect) {
@@ -157,6 +269,7 @@ struct ImageViewer: View {
     private func exitCropMode() {
         cropDraft = nil
         cropDragStart = nil
+        cropDragMode = .idle
         store.cropMode = false
     }
 

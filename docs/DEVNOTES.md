@@ -149,6 +149,11 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
   Project Name (per-photo project → sanitized folder) / Custom. Photos grouped
   per folder; Custom-Name sequence numbering restarts per folder.
 
+- **2026-08-21** Crop v2: aspect presets (Freeform/Original/Square/2:3/3:2/
+  4:5/5:4/16:9 — snapping existing box on change), adjustable box: corner
+  handles resize (opposite-corner anchor), drag inside moves (clamped), drag
+  outside redraws; constrainedRect re-applies aspect after bounds clamping.
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)
