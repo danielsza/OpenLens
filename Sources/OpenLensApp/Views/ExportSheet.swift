@@ -77,7 +77,8 @@ struct ExportSheet: View {
                     TextField("Resolution (DPI, optional)", text: $dpiText)
                     TextField("Rename to (e.g. Wedding → Wedding 001.jpg)", text: $customName)
                     if !customName.trimmingCharacters(in: .whitespaces).isEmpty {
-                        Text("Files will be named “\(customName.trimmingCharacters(in: .whitespaces)) 001.\(format == .originals ? "…" : ExportSettings(format: format).fileExtension)”, numbered in order.")
+                        let ext = format == .jpeg ? "jpg" : format.rawValue
+                        Text("Files will be named “\(customName.trimmingCharacters(in: .whitespaces)) 001.\(ext)”, numbered in order.")
                             .font(.caption2).foregroundStyle(.secondary)
                     }
                     TextField("Add to file name (e.g. _web)", text: $nameSuffix)
