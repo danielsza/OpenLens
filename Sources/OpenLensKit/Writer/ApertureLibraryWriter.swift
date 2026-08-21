@@ -499,13 +499,17 @@ public final class ApertureLibraryWriter {
         let newUuid = UUID().uuidString
         let mid = try nextModelId("RKVersion", db)
         func v(_ k: String) -> SQLiteDatabase.Value { r[k] ?? .null }
+        // Distinct name (Aperture style) so the pair is tellable apart and
+        // exports don't collide on identical file names.
+        let baseName = r["name"]?.stringValue ?? "Untitled"
+        let newName = "\(baseName) - Version \(nextVer)"
         try db.execute("""
             INSERT INTO RKVersion(modelId, uuid, name, fileName, versionNumber, masterUuid, projectUuid,
                 imageDate, mainRating, isFlagged, isOriginal, isEditable, colorLabelIndex,
                 masterWidth, masterHeight, rotation, hasAdjustments, hasKeywords, createDate,
                 isInTrash, showInLibrary, exifLatitude, exifLongitude)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 1, -1, ?, ?, ?, 0, 0, ?, 0, 1, ?, ?)
-            """, [.integer(Int64(mid)), .text(newUuid), v("name"), v("fileName"),
+            """, [.integer(Int64(mid)), .text(newUuid), .text(newName), v("fileName"),
                   .integer(Int64(nextVer)), .text(masterUuid), v("projectUuid"), v("imageDate"),
                   v("masterWidth"), v("masterHeight"), v("rotation"),
                   .real(Date().timeIntervalSinceReferenceDate),

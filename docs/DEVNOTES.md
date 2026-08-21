@@ -154,6 +154,14 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
   handles resize (opposite-corner anchor), drag inside moves (clamped), drag
   outside redraws; constrainedRect re-applies aspect after bounds clamping.
 
+- **2026-08-21** Duplicate/crop confusion ROOT-CAUSED by inspecting babcia's
+  catalog directly: crop WAS saved correctly (master-space, valid) on the
+  ORIGINAL; both versions shared the IDENTICAL name (→ wrong one exported) and
+  both thumb files were byte-identical (refreshThumbnail silently didn't
+  take). Fixes: grid thumbnails now render saved OL adjustments LIVE from the
+  master (no dependency on regenerated thumb files; key includes cacheKey);
+  duplicates named "<name> - Version N".
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)

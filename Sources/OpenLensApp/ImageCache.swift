@@ -38,18 +38,31 @@ final class ImageCache {
     }
 
     /// Returns a decoded, downsampled image for a photo, caching the result.
+    /// Photos with saved OpenLens adjustments render live from the master so
+    /// thumbnails always reflect crops/edits (cached thumbnail files can lag).
     func image(for photo: Photo, in library: ApertureLibrary, maxPixel: Int) async -> NSImage? {
         let rotation = photo.version.rotation
-        let k = key("\(photo.id)#\(rotation)", maxPixel)
+        let params = photo.version.hasAdjustments ? library.olAdjustments(for: photo) : nil
+        let k = key("\(photo.id)#\(rotation)#\(params?.cacheKey ?? "-")", maxPixel)
         if let hit = cache.object(forKey: k) { return hit }
-        let url = library.displayImageURL(for: photo)
         let isVideo = photo.master.isVideo
         let masterURL = library.masterFileURL(for: photo.master)
+        let url: URL
+        if params != nil, !isVideo, FileManager.default.fileExists(atPath: masterURL.path) {
+            url = masterURL
+        } else {
+            url = library.displayImageURL(for: photo)
+        }
         // Aperture's cached thumbnails/previews are ALREADY rotated; only the
         // raw master needs the version's rotation applied.
         let applyRotation = (url == masterURL) ? rotation : 0
+        let masterSize: CGSize? = {
+            guard let w = photo.version.masterWidth, let h = photo.version.masterHeight,
+                  w > 0, h > 0 else { return nil }
+            return CGSize(width: w, height: h)
+        }()
         let cg = await Task.detached(priority: .utility) { () -> CGImage? in
-            let base: CGImage?
+            var base: CGImage?
             if isVideo {
                 // Cached thumb if Aperture made one, else grab a video frame.
                 base = ImageLoader.cgImage(at: url, maxPixelSize: maxPixel)
@@ -57,8 +70,13 @@ final class ImageCache {
             } else {
                 base = ImageLoader.cgImage(at: url, maxPixelSize: maxPixel)
             }
-            guard let base else { return nil }
-            return ImageLoader.rotate(base, degrees: applyRotation)
+            guard var image = base else { return nil }
+            if let params {
+                // For downsampled decodes crop coords scale by rendered/master.
+                image = AdjustmentRenderer.apply(params, to: image,
+                                                 masterPixelSize: masterSize)
+            }
+            return ImageLoader.rotate(image, degrees: applyRotation)
         }.value
         guard let cg else { return nil }
         let image = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
