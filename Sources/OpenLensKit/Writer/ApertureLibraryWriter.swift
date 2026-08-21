@@ -519,6 +519,22 @@ public final class ApertureLibraryWriter {
                from: data, options: [], format: nil) as? [String: Any] {
             plist["uuid"] = newUuid
             plist["versionNumber"] = nextVer
+            // Give the duplicate its OWN thumbnail files — sharing the
+            // original's meant rotating one visually "rotated" both.
+            if var proxy = plist["imageProxyState"] as? [String: Any] {
+                for key in ["thumbnailPath", "miniThumbnailPath"] {
+                    guard let rel = proxy[key] as? String else { continue }
+                    let ext = (rel as NSString).pathExtension
+                    let stem = (rel as NSString).deletingPathExtension
+                    let newRel = "\(stem)_v\(nextVer).\(ext)"
+                    let thumbsDir = libraryURL.appendingPathComponent("Thumbnails")
+                    try? FileManager.default.copyItem(
+                        at: thumbsDir.appendingPathComponent(rel),
+                        to: thumbsDir.appendingPathComponent(newRel))
+                    proxy[key] = newRel
+                }
+                plist["imageProxyState"] = proxy
+            }
             let dest = src.deletingLastPathComponent()
                 .appendingPathComponent("Version-\(nextVer).apversion")
             if !FileManager.default.fileExists(atPath: dest.path),
