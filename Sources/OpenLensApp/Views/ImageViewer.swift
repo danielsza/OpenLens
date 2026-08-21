@@ -18,6 +18,9 @@ struct ImageViewer: View {
     @State private var lastPhotoID: String?
     /// In-progress brush stroke, in fitted-rect-local view coordinates.
     @State private var currentStroke: [CGPoint] = []
+    /// Crop-drag state (fitted-rect-local view coordinates).
+    @State private var cropDragStart: CGPoint?
+    @State private var cropDraft: CGRect?
 
     private let loupeDiameter: CGFloat = 180
     /// Aperture offered 50%–1600%; step through with = / - while the loupe is on.
@@ -60,6 +63,8 @@ struct ImageViewer: View {
                 .keyboardShortcut("-", modifiers: [])
             Button("") { store.toggleBrushMode() }
                 .keyboardShortcut("p", modifiers: [])
+            Button("") { store.toggleCropMode() }
+                .keyboardShortcut("c", modifiers: [])
         }
         .opacity(0)
         .frame(width: 0, height: 0)
@@ -70,6 +75,89 @@ struct ImageViewer: View {
         let idx = loupeZoomLevels.firstIndex { $0 >= loupeZoom } ?? 3
         let next = max(0, min(loupeZoomLevels.count - 1, idx + direction))
         loupeZoom = loupeZoomLevels[next]
+    }
+
+    // MARK: - Crop
+
+    /// Drag-to-crop overlay: dims outside the draft rect, thirds grid inside,
+    /// Apply/Cancel buttons underneath.
+    @ViewBuilder
+    private func cropLayer(fitted: CGRect) -> some View {
+        ZStack(alignment: .topLeading) {
+            // Dim everything outside the draft (even-odd fill).
+            Path { p in
+                p.addRect(CGRect(origin: .zero, size: fitted.size))
+                if let r = cropDraft { p.addRect(r) }
+            }
+            .fill(Color.black.opacity(0.55), style: FillStyle(eoFill: true))
+
+            if let r = cropDraft {
+                Path { p in
+                    p.addRect(r)
+                    // Thirds grid.
+                    for i in 1...2 {
+                        let x = r.minX + r.width * CGFloat(i) / 3
+                        p.move(to: CGPoint(x: x, y: r.minY)); p.addLine(to: CGPoint(x: x, y: r.maxY))
+                        let y = r.minY + r.height * CGFloat(i) / 3
+                        p.move(to: CGPoint(x: r.minX, y: y)); p.addLine(to: CGPoint(x: r.maxX, y: y))
+                    }
+                }
+                .stroke(Color.white.opacity(0.9), lineWidth: 1)
+            } else {
+                Text("Drag to select the crop area")
+                    .font(.caption).foregroundStyle(.white)
+                    .padding(6).background(.black.opacity(0.6), in: Capsule())
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .frame(width: fitted.width, height: fitted.height)
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 2)
+                .onChanged { value in
+                    let start = cropDragStart ?? value.startLocation
+                    cropDragStart = start
+                    cropDraft = CGRect(x: min(start.x, value.location.x),
+                                       y: min(start.y, value.location.y),
+                                       width: abs(value.location.x - start.x),
+                                       height: abs(value.location.y - start.y))
+                }
+                .onEnded { _ in cropDragStart = nil }
+        )
+        .position(x: fitted.midX, y: fitted.midY)
+        .overlay(alignment: .bottom) {
+            HStack(spacing: 10) {
+                Button("Cancel") { exitCropMode() }
+                Button("Apply Crop") { applyCrop(fitted: fitted) }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(cropDraft == nil || (cropDraft?.width ?? 0) < 8)
+            }
+            .controlSize(.small)
+            .padding(8)
+            .background(.ultraThinMaterial, in: Capsule())
+            .padding(.bottom, 26)
+            .environment(\.colorScheme, .dark)
+        }
+    }
+
+    private func applyCrop(fitted: CGRect) {
+        guard let r = cropDraft, let photo = store.selectedPhoto,
+              fitted.width > 0, fitted.height > 0 else { return }
+        let mw = Double(photo.version.masterWidth ?? Int(image?.size.width ?? fitted.width))
+        let mh = Double(photo.version.masterHeight ?? Int(image?.size.height ?? fitted.height))
+        // View-local top-left rect → master pixels, bottom-left origin.
+        store.editParams.cropX = Double(r.minX / fitted.width) * mw
+        store.editParams.cropY = mh - Double(r.maxY / fitted.height) * mh
+        store.editParams.cropWidth = Double(r.width / fitted.width) * mw
+        store.editParams.cropHeight = Double(r.height / fitted.height) * mh
+        store.previewAdjustments(store.editParams)
+        exitCropMode()
+    }
+
+    private func exitCropMode() {
+        cropDraft = nil
+        cropDragStart = nil
+        store.cropMode = false
     }
 
     // MARK: - Brush
@@ -301,6 +389,10 @@ struct ImageViewer: View {
                     .frame(width: fitted.width + 2, height: fitted.height + 2)
                     .position(x: fitted.midX, y: fitted.midY)
                     .allowsHitTesting(false)
+
+                if store.cropMode {
+                    cropLayer(fitted: fitted)
+                }
 
                 if store.brushMode {
                     brushPaintLayer(fitted: fitted)

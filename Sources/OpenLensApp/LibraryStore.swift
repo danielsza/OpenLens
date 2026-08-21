@@ -75,9 +75,21 @@ final class LibraryStore: ObservableObject {
     /// the saved layers in the catalog).
     @Published var liveLayers: [OLLocalAdjustment]?
 
+    /// Crop mode: drag a rectangle on the viewer to crop (C).
+    @Published var cropMode = false
+
+    func toggleCropMode() {
+        cropMode.toggle()
+        if cropMode {
+            brushMode = false
+            if viewMode == .grid { viewMode = .split }
+        }
+    }
+
     func toggleBrushMode() {
         brushMode.toggle()
         if brushMode {
+            cropMode = false
             // Painting happens on the big viewer — make sure it's visible.
             if viewMode == .grid { viewMode = .split }
             if liveLayers == nil, let photo = selectedPhoto, let lib = library {

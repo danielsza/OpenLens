@@ -73,6 +73,8 @@ struct OpenLensApp: App {
                     .keyboardShortcut("h", modifiers: [])
                 Button("Brush Local Adjustments") { store.toggleBrushMode() }
                     .keyboardShortcut("p", modifiers: [])
+                Button("Crop") { store.toggleCropMode() }
+                    .keyboardShortcut("c", modifiers: [])
                 Divider()
                 Button("Start Slideshow") {
                     NotificationCenter.default.post(name: .slideshowRequested, object: nil)

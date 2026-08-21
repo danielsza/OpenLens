@@ -53,6 +53,16 @@ struct ControlBar: View {
                 .help("Brush local adjustments (P)")
                 .onHover { hint = $0 ? "Brush — paint local adjustments (P)" : nil }
 
+                Button {
+                    store.toggleCropMode()
+                } label: {
+                    Image(systemName: "crop")
+                        .foregroundStyle(store.cropMode ? Color.accentColor : Theme.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .help("Crop (C)")
+                .onHover { hint = $0 ? "Crop — drag a rectangle on the photo (C)" : nil }
+
                 if store.viewerFocused && store.selectedPhoto != nil {
                     // Viewer is focused: the slider zooms the big image.
                     HStack(spacing: 6) {

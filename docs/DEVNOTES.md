@@ -127,6 +127,13 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
   modal sheet, so the adjustments panel is intentionally disabled while it's
   open (close with Done).
 
+- **2026-07-24** **Interactive crop** (C key / crop icon / View menu):
+  drag-rect overlay on the viewer (dim outside via even-odd fill, thirds
+  grid, Apply/Cancel capsule); Apply converts view-local top-left rect →
+  master-space bottom-left crop into editParams + live preview; Save persists
+  as usual; Geometry brick's Clear removes. Crop/brush modes are mutually
+  exclusive. File menu gained Import items (⇧⌘I / referenced / folder).
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)
