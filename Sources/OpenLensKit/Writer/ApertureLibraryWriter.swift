@@ -319,7 +319,7 @@ public final class ApertureLibraryWriter {
         guard allowWrites else { throw WriteError.writesNotAllowed }
         let db = try SQLiteDatabase(path: dbPath, readOnly: true)
         guard let plistURL = try locateVersionPlist(forVersionUuid: uuid, using: db) else {
-            throw WriteError.plistNotFound(uuid)
+            return   // no plist (e.g. an OpenLens-made duplicate) — DB holds truth
         }
         var format = PropertyListSerialization.PropertyListFormat.binary
         let data = try Data(contentsOf: plistURL)
@@ -510,6 +510,24 @@ public final class ApertureLibraryWriter {
                   v("masterWidth"), v("masterHeight"), v("rotation"),
                   .real(Date().timeIntervalSinceReferenceDate),
                   v("exifLatitude"), v("exifLongitude")])
+        // Best-effort: author a Version-N.apversion for the duplicate (copy of
+        // the source's, with its own uuid/number) so plist-backed edits like
+        // rotation and IPTC keep working on duplicates.
+        if let srcPlist = try? locateVersionPlist(forVersionUuid: uuid, using: db),
+           let src = srcPlist,
+           let data = try? Data(contentsOf: src),
+           var plist = try? PropertyListSerialization.propertyList(
+               from: data, options: [], format: nil) as? [String: Any] {
+            plist["uuid"] = newUuid
+            plist["versionNumber"] = nextVer
+            let dest = src.deletingLastPathComponent()
+                .appendingPathComponent("Version-\(nextVer).apversion")
+            if !FileManager.default.fileExists(atPath: dest.path),
+               let out = try? PropertyListSerialization.data(
+                   fromPropertyList: plist, format: .binary, options: 0) {
+                try? out.write(to: dest)
+            }
+        }
         return newUuid
     }
 
@@ -911,7 +929,9 @@ public final class ApertureLibraryWriter {
                 return fileURL
             }
         }
-        throw WriteError.plistNotFound(uuid)
+        // Missing plist (e.g. a duplicate we authored, or an odd library) —
+        // callers degrade to DB-only updates rather than failing the edit.
+        return nil
     }
 
     private func patchPlist(at url: URL,

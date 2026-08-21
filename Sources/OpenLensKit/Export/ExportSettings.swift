@@ -16,19 +16,31 @@ public struct ExportSettings {
     public var watermark: Watermark?
     /// Appended to the base file name (e.g. "_web") before the extension.
     public var fileNameSuffix: String = ""
+    /// Aperture-style "Custom Name with Index": non-empty renames files to
+    /// "<customName> 001", "<customName> 002", … in export order.
+    public var customName: String = ""
     /// Carry the source's EXIF/TIFF/IPTC/GPS metadata into the exported file.
     public var preserveMetadata: Bool = true
 
     public init(format: Format = .jpeg, maxPixelSize: Int = 0, jpegQuality: Double = 0.9,
                 dpi: Double? = nil, watermark: Watermark? = nil, fileNameSuffix: String = "",
-                preserveMetadata: Bool = true) {
+                customName: String = "", preserveMetadata: Bool = true) {
         self.format = format
         self.maxPixelSize = maxPixelSize
         self.jpegQuality = jpegQuality
         self.dpi = dpi
         self.watermark = watermark
         self.fileNameSuffix = fileNameSuffix
+        self.customName = customName
         self.preserveMetadata = preserveMetadata
+    }
+
+    /// The output base name for the photo at `index` (1-based) in the batch.
+    func baseName(for photo: Photo, index: Int) -> String {
+        if !customName.isEmpty {
+            return String(format: "%@ %03d%@", customName, index, fileNameSuffix)
+        }
+        return photo.version.name + fileNameSuffix
     }
 
     var fileExtension: String {
@@ -93,7 +105,8 @@ public extension Exporter {
     /// Exports a photo with full settings (format/size/dpi/watermark), returning
     /// the written file URL.
     @discardableResult
-    func export(_ photo: Photo, to directory: URL, settings: ExportSettings) throws -> URL {
+    func export(_ photo: Photo, to directory: URL, settings: ExportSettings,
+                sequenceIndex: Int = 1) throws -> URL {
         let fm = FileManager.default
         try fm.createDirectory(at: directory, withIntermediateDirectories: true)
 
@@ -118,8 +131,14 @@ public extension Exporter {
             }()
             cg = AdjustmentRenderer.apply(params, to: cg, masterPixelSize: masterSize)
         }
+        // Apply the version's rotation (adjustment/crop coords live in
+        // UN-rotated master space, so rotate after adjustments).
+        if photo.version.rotation != 0 {
+            cg = ImageLoader.rotate(cg, degrees: photo.version.rotation)
+        }
         let rendered = Exporter.applyWatermark(cg, settings.watermark)
-        let dest = uniqueURL(in: directory, base: photo.version.name + settings.fileNameSuffix,
+        let dest = uniqueURL(in: directory,
+                             base: settings.baseName(for: photo, index: sequenceIndex),
                              ext: settings.fileExtension)
         let sourceMeta = settings.preserveMetadata ? Exporter.sourceMetadata(of: src) : [:]
         guard Exporter.encode(rendered, to: dest, settings: settings, sourceMetadata: sourceMeta) else {
@@ -147,9 +166,11 @@ public extension Exporter {
         -> (written: [URL], failures: [(Photo, Error)]) {
         var written: [URL] = []
         var failures: [(Photo, Error)] = []
-        for photo in photos {
-            do { written.append(try export(photo, to: directory, settings: settings)) }
-            catch { failures.append((photo, error)) }
+        for (index, photo) in photos.enumerated() {
+            do {
+                written.append(try export(photo, to: directory, settings: settings,
+                                          sequenceIndex: index + 1))
+            } catch { failures.append((photo, error)) }
         }
         return (written, failures)
     }

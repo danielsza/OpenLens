@@ -14,6 +14,7 @@ struct ExportSheet: View {
     @AppStorage("export.quality") private var quality = 0.9
     @AppStorage("export.dpi") private var dpiText = ""
     @AppStorage("export.suffix") private var nameSuffix = ""
+    @AppStorage("export.customName") private var customName = ""
     @AppStorage("export.preserveMeta") private var preserveMetadata = true
     @AppStorage("export.wmText") private var watermarkText = ""
     @AppStorage("export.logoPath") private var logoPath = ""
@@ -74,6 +75,11 @@ struct ExportSheet: View {
                         }
                     }
                     TextField("Resolution (DPI, optional)", text: $dpiText)
+                    TextField("Rename to (e.g. Wedding → Wedding 001.jpg)", text: $customName)
+                    if !customName.trimmingCharacters(in: .whitespaces).isEmpty {
+                        Text("Files will be named “\(customName.trimmingCharacters(in: .whitespaces)) 001.\(format == .originals ? "…" : ExportSettings(format: format).fileExtension)”, numbered in order.")
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
                     TextField("Add to file name (e.g. _web)", text: $nameSuffix)
                     Toggle("Include EXIF/IPTC metadata", isOn: $preserveMetadata)
 
@@ -171,6 +177,7 @@ struct ExportSheet: View {
             format: format, maxPixelSize: effectiveMaxEdge, jpegQuality: quality,
             dpi: Double(dpiText.trimmingCharacters(in: .whitespaces)), watermark: watermark,
             fileNameSuffix: nameSuffix.trimmingCharacters(in: .whitespaces),
+            customName: customName.trimmingCharacters(in: .whitespaces),
             preserveMetadata: preserveMetadata)
 
         let result = Exporter(library: lib).exportBatch(photos, to: dest, settings: settings)

@@ -79,9 +79,14 @@ final class ImageCache {
         if let hit = cache.object(forKey: k) { return hit }
         // With OpenLens adjustments active, render from the MASTER so our
         // params fully define the look (applying them over Aperture's baked
-        // preview would double-apply edits). Otherwise prefer the preview.
+        // preview would double-apply edits). Also use the master when the
+        // photo is rotated but has no Aperture edits — the preview's baked
+        // rotation goes stale once WE rotate (viewer showed no change).
+        let apertureEdited = rotation != 0
+            ? !library.decodedApertureAdjustments(for: photo).isEmpty
+            : false
         let url: URL
-        if params != nil || !layers.isEmpty {
+        if params != nil || !layers.isEmpty || (rotation != 0 && !apertureEdited) {
             let master = library.masterFileURL(for: photo.master)
             url = FileManager.default.fileExists(atPath: master.path)
                 ? master

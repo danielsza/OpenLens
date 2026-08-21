@@ -134,6 +134,17 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
   as usual; Geometry brick's Clear removes. Crop/brush modes are mutually
   exclusive. File menu gained Import items (⇧⌘I / referenced / folder).
 
+- **2026-08-21** Daniel's deep test sweep (CR2 confirmed UPRIGHT through
+  CIRAWFilter ✓): FIXES — locateVersionPlist returns nil instead of throwing
+  (duplicates have no plist; edits degrade to DB-only); duplicateVersion now
+  authors a Version-N.apversion copy (uuid/versionNumber updated); viewer
+  prefers MASTER when rotation set and no Aperture edits (our rotate left the
+  baked preview stale → "rotate does nothing"); EXPORT now applies
+  version.rotation (was silently dropped — rotate AFTER adjustments, coords
+  are master-space); export gains Aperture-style "Custom Name 001" renaming
+  (ExportSettings.customName + sequenceIndex). Export dest panel already had
+  canCreateDirectories.
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)
