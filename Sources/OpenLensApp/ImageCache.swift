@@ -76,7 +76,8 @@ final class ImageCache {
         }
         // Aperture's cached thumbnails/previews are ALREADY rotated; only the
         // raw master needs the version's rotation applied.
-        let applyRotation = (url == masterURL) ? rotation : 0
+        let resolvedURL = url
+        let applyRotation = (resolvedURL == masterURL) ? rotation : 0
         let masterSize: CGSize? = {
             guard let w = photo.version.masterWidth, let h = photo.version.masterHeight,
                   w > 0, h > 0 else { return nil }
@@ -86,10 +87,10 @@ final class ImageCache {
             var base: CGImage?
             if isVideo {
                 // Cached thumb if Aperture made one, else grab a video frame.
-                base = ImageLoader.cgImage(at: url, maxPixelSize: maxPixel)
+                base = ImageLoader.cgImage(at: resolvedURL, maxPixelSize: maxPixel)
                     ?? Self.videoFrame(url: masterURL, maxPixel: maxPixel)
             } else {
-                base = ImageLoader.cgImage(at: url, maxPixelSize: maxPixel)
+                base = ImageLoader.cgImage(at: resolvedURL, maxPixelSize: maxPixel)
             }
             guard var image = base else { return nil }
             if let params {
