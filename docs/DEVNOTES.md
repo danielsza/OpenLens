@@ -162,6 +162,15 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
   master (no dependency on regenerated thumb files; key includes cacheKey);
   duplicates named "<name> - Version N".
 
+- **2026-08-23** Thumb-staleness ENDGAME (verified via PIL on babcia: the
+  original's thumb file IS the 431×190 crop — refresh worked; the DUPLICATE's
+  copy carried the source's crop). Fixes: refreshThumbnail deletes stale file
+  BEFORE regenerating (overwrite failures now fail SAFE to master);
+  duplicateVersion regenerates the dup's own thumbs (no inherited edits);
+  ImageCache.image self-heals aspect-impossible thumbs (unedited, unrotated,
+  >12% aspect mismatch → master); ImageCache.removeAll() on store.reload()
+  (in-memory NSCache kept pre-edit renders alive across saves).
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)

@@ -18,6 +18,13 @@ final class ImageCache {
         "\(id)@\(maxPixel)" as NSString
     }
 
+    /// Drops all cached renders — called after catalog mutations so edits,
+    /// rotations, and regenerated thumbnails always show fresh.
+    func removeAll() {
+        cache.removeAllObjects()
+        baseCache.removeAllObjects()
+    }
+
     /// Decoded pre-adjustment viewer images (big; keep only a few) so live
     /// slider changes skip the disk decode and just re-run Core Image.
     private let baseCache: NSCache<NSString, CGImage> = {
@@ -47,11 +54,25 @@ final class ImageCache {
         if let hit = cache.object(forKey: k) { return hit }
         let isVideo = photo.master.isVideo
         let masterURL = library.masterFileURL(for: photo.master)
-        let url: URL
+        var url: URL
         if params != nil, !isVideo, FileManager.default.fileExists(atPath: masterURL.path) {
             url = masterURL
         } else {
             url = library.displayImageURL(for: photo)
+        }
+        // Self-heal stale thumb files: an unedited, unrotated photo whose
+        // cached thumb aspect can't match the master is showing an outdated
+        // render (e.g. a copied crop) — use the master instead.
+        if params == nil, rotation == 0, !isVideo, url != masterURL,
+           let mw = photo.version.masterWidth, let mh = photo.version.masterHeight,
+           mw > 0, mh > 0,
+           let thumbSize = ImageLoader.pixelSize(at: url), thumbSize.height > 0 {
+            let expected = Double(mw) / Double(mh)
+            let actual = thumbSize.width / thumbSize.height
+            if abs(actual - expected) / expected > 0.12,
+               FileManager.default.fileExists(atPath: masterURL.path) {
+                url = masterURL
+            }
         }
         // Aperture's cached thumbnails/previews are ALREADY rotated; only the
         // raw master needs the version's rotation applied.

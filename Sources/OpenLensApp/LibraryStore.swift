@@ -397,6 +397,7 @@ final class LibraryStore: ObservableObject {
     /// "no library open" state so the user can open or switch).
     /// Reloads the current library from disk (after a structural change).
     func reload() {
+        ImageCache.shared.removeAll()   // never show pre-edit cached renders
         if let url = library?.url { open(url: url) }
     }
 

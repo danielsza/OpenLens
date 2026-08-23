@@ -294,6 +294,10 @@ public final class ApertureLibraryWriter {
             let dest = libraryURL.appendingPathComponent("Thumbnails").appendingPathComponent(rel)
             try? FileManager.default.createDirectory(at: dest.deletingLastPathComponent(),
                                                      withIntermediateDirectories: true)
+            // Delete the stale file FIRST: if regeneration fails for any
+            // reason, readers fall back to the master instead of showing an
+            // outdated render (tilted/cropped thumbs that no longer match).
+            try? FileManager.default.removeItem(at: dest)
             let maxPixel = key == "thumbnailPath" ? 1024 : 360
             guard var cg = ImageLoader.cgImage(at: masterURL, maxPixelSize: maxPixel) else { continue }
             if let adjustments {
@@ -546,6 +550,11 @@ public final class ApertureLibraryWriter {
                    fromPropertyList: plist, format: .binary, options: 0) {
                 try? out.write(to: dest)
             }
+            // Regenerate the duplicate's own thumbs from the master — the
+            // copied files may carry the SOURCE's edits (crop/straighten)
+            // which the fresh duplicate doesn't have.
+            let dupRotation = r["rotation"]?.intValue ?? 0
+            try? refreshThumbnail(versionUuid: newUuid, rotation: dupRotation, adjustments: nil)
         }
         return newUuid
     }
