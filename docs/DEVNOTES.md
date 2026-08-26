@@ -171,6 +171,14 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
   >12% aspect mismatch → master); ImageCache.removeAll() on store.reload()
   (in-memory NSCache kept pre-edit renders alive across saves).
 
+- **2026-08-23** **Universal binaries (Apple Silicon + Intel)**: all release
+  builds use `--arch arm64 --arch x86_64` (build_app.sh, ci.yml package,
+  release.yml — note multi-arch products land in .build/apple/Products, so
+  always use `--show-bin-path` WITH the same arch flags; the old
+  `.build/release/openlens-cli` upload path was replaced). Min macOS stays
+  14.0 (covers 2018+ Intel Macs). lipo -info echoed in release logs.
+  Tests still run natively (ARM) only.
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)

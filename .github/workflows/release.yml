@@ -17,7 +17,7 @@ jobs:
           OPENLENS_TEST_LIBRARY: ${{ github.workspace }}/Tests/Fixtures/Mini.aplibrary
         run: swift test
       - name: Release build
-        run: swift build -c release
+        run: swift build -c release --arch arm64 --arch x86_64
       - name: Build app icon
         run: |
           set -eux
@@ -33,7 +33,7 @@ jobs:
       - name: Assemble OpenLens.app
         run: |
           set -eux
-          BIN="$(swift build -c release --show-bin-path)"
+          BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)"
           APP="OpenLens.app"
           VERSION="${GITHUB_REF_NAME#v}"
           SU_PUBLIC_KEY=""
@@ -41,6 +41,10 @@ jobs:
           mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
           cp "$BIN/OpenLensApp" "$APP/Contents/MacOS/OpenLens"
           cp "$BIN/openlens-cli" "$APP/Contents/MacOS/openlens-cli"
+          cp "$BIN/openlens-cli" ./openlens-cli-universal
+          echo "── architectures ──"
+          lipo -info "$APP/Contents/MacOS/OpenLens"
+          lipo -info "$APP/Contents/MacOS/openlens-cli"
           cp OpenLens.icns "$APP/Contents/Resources/OpenLens.icns"
           SPARKLE_FW="$(find .build -type d -name "Sparkle.framework" -path "*macos*" | head -1 || true)"
           if [ -n "$SPARKLE_FW" ]; then
@@ -127,4 +131,4 @@ jobs:
             --notes "See CHANGELOG.md. First install: right-click ▸ Open (unsigned). Auto-updates via Sparkle afterwards." \
             "OpenLens-${GITHUB_REF_NAME}.zip" \
             "appcast.xml" \
-            ".build/release/openlens-cli#openlens-cli"
+            "openlens-cli-universal#openlens-cli"

@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Release build
-        run: swift build -c release
+        run: swift build -c release --arch arm64 --arch x86_64
       - name: Build app icon
         run: |
           set -eux
@@ -44,7 +44,7 @@ jobs:
       - name: Assemble OpenLens.app
         run: |
           set -eux
-          BIN="$(swift build -c release --show-bin-path)"
+          BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)"
           APP="OpenLens.app"
           mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
           cp "$BIN/OpenLensApp" "$APP/Contents/MacOS/OpenLens"

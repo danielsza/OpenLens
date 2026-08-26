@@ -6,8 +6,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 echo "▸ Building release binaries…"
-swift build -c release
-BIN="$(swift build -c release --show-bin-path)"
+# Universal (Apple Silicon + Intel) build.
+swift build -c release --arch arm64 --arch x86_64
+BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)"
 
 echo "▸ Drawing app icon…"
 mkdir -p build OpenLens.iconset
