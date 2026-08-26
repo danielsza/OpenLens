@@ -570,19 +570,18 @@ final class LibraryStore: ObservableObject {
         let name = url.deletingPathExtension().lastPathComponent
         importProgress = "Opening \(name)…"
         let keepSelection = library?.url.path == url.path
-        Task.detached(priority: .userInitiated) { [weak self] in
+        Task.detached(priority: .userInitiated) {
             do {
                 let lib = try ApertureLibrary(url: url)
                 let catalog = try Self.loadCatalog(from: lib)
                 await MainActor.run {
-                    guard let self else { return }
                     self.importProgress = nil
                     self.apply(lib, catalog, url: url, keepSelection: keepSelection)
                 }
             } catch {
                 await MainActor.run {
-                    self?.importProgress = nil
-                    self?.errorMessage = "\(error)"
+                    self.importProgress = nil
+                    self.errorMessage = "\(error)"
                 }
             }
         }
