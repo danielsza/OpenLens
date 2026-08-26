@@ -51,7 +51,19 @@ struct ContentView: View {
         .toolbar { toolbarContent }
         .overlay {
             if store.library == nil {
-                ContentUnavailablePlaceholder(store: store)
+                if store.importProgress != nil {
+                    // A library is loading — show progress, not the chooser.
+                    ZStack {
+                        Theme.appBackground
+                        VStack(spacing: 12) {
+                            ProgressView()
+                            Text(store.importProgress ?? "Opening…")
+                                .font(.callout).foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                } else {
+                    ContentUnavailablePlaceholder(store: store)
+                }
             }
         }
         .overlay(alignment: .bottom) {

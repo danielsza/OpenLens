@@ -573,7 +573,8 @@ final class LibraryStore: ObservableObject {
     }
 
     /// Opens without blocking the main thread; shows a progress capsule.
-    /// Essential for big libraries (a 68k-photo catalog beachballed the UI).
+    /// Two-phase: photos appear as soon as the version list is read; albums,
+    /// trash, and the keyword index stream in afterwards.
     func openAsync(url: URL) {
         let name = url.deletingPathExtension().lastPathComponent
         importProgress = "Opening \(name)…"
@@ -581,14 +582,37 @@ final class LibraryStore: ObservableObject {
         Task.detached(priority: .userInitiated) {
             do {
                 let lib = try ApertureLibrary(url: url)
-                let catalog = try Self.loadCatalog(from: lib) { stage in
-                    Task { @MainActor in
-                        self.importProgress = "Opening \(name) — \(stage)…"
-                    }
-                }
+                await MainActor.run { self.importProgress = "Opening \(name) — photos…" }
+                let projects = try lib.projects()
+                let tree = (try? lib.projectNavigator()) ?? []
+                let photos = try lib.photos()
                 await MainActor.run {
+                    var core = LoadedCatalog()
+                    core.projects = projects
+                    core.projectTree = tree
+                    core.photos = photos
+                    // Keep any albums/keywords from a previous open of the
+                    // same library until the fresh ones stream in.
+                    core.userAlbums = keepSelection ? self.userAlbums : []
+                    core.albumPhotos = keepSelection ? self.albumPhotos : [:]
+                    core.trashed = keepSelection ? self.trashed : []
+                    core.keywordMap = keepSelection ? self.keywordMap : [:]
+                    self.apply(lib, core, url: url, keepSelection: keepSelection)
+                    self.importProgress = "\(name): \(photos.count) photos — loading albums & keywords…"
+                }
+                let albums = (try? lib.userAlbums()) ?? []
+                var map: [String: [Photo]] = [:]
+                for album in albums {
+                    map[album.id] = (try? lib.photos(inAlbum: album)) ?? []
+                }
+                let trashed = (try? lib.trashedPhotos()) ?? []
+                let keywords = (try? lib.keywordsByVersion()) ?? [:]
+                await MainActor.run {
+                    self.userAlbums = albums
+                    self.albumPhotos = map
+                    self.trashed = trashed
+                    self.setKeywordMap(keywords)
                     self.importProgress = nil
-                    self.apply(lib, catalog, url: url, keepSelection: keepSelection)
                 }
             } catch {
                 await MainActor.run {
@@ -597,6 +621,11 @@ final class LibraryStore: ObservableObject {
                 }
             }
         }
+    }
+
+    /// keywordMap is private; phase-2 loading assigns it through this.
+    private func setKeywordMap(_ map: [Int: [String]]) {
+        keywordMap = map
     }
 
     // MARK: - Known libraries (Aperture-style library list)

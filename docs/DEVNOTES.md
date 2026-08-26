@@ -187,6 +187,11 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
   same url) now used by ALL entry points incl. reload() (sync reload after
   every save also beachballed). Force-quit during open is safe (immutable).
 
+- **2026-08-25** Two-phase open: photos apply as soon as read (grid paints);
+  albums/trash/keywords stream in after (capsule shows counts). Empty-window
+  state shows a LOADING panel instead of the Choose Library dialog while
+  importProgress non-nil (chooser was appearing mid-load).
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)
