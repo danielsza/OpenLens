@@ -514,16 +514,24 @@ final class LibraryStore: ObservableObject {
         var keywordMap: [Int: [String]] = [:]
     }
 
-    private nonisolated static func loadCatalog(from lib: ApertureLibrary) throws -> LoadedCatalog {
+    private nonisolated static func loadCatalog(
+        from lib: ApertureLibrary,
+        progress: @escaping @Sendable (String) -> Void = { _ in }
+    ) throws -> LoadedCatalog {
         var c = LoadedCatalog()
+        progress("projects")
         c.projects = try lib.projects()
         c.projectTree = (try? lib.projectNavigator()) ?? []
+        progress("photos")
         c.photos = try lib.photos()
+        progress("\(c.photos.count) photos — albums")
         c.userAlbums = (try? lib.userAlbums()) ?? []
         for album in c.userAlbums {
             c.albumPhotos[album.id] = (try? lib.photos(inAlbum: album)) ?? []
         }
+        progress("\(c.photos.count) photos — trash")
         c.trashed = (try? lib.trashedPhotos()) ?? []
+        progress("\(c.photos.count) photos — keywords")
         c.keywordMap = (try? lib.keywordsByVersion()) ?? [:]
         return c
     }
@@ -573,7 +581,11 @@ final class LibraryStore: ObservableObject {
         Task.detached(priority: .userInitiated) {
             do {
                 let lib = try ApertureLibrary(url: url)
-                let catalog = try Self.loadCatalog(from: lib)
+                let catalog = try Self.loadCatalog(from: lib) { stage in
+                    Task { @MainActor in
+                        self.importProgress = "Opening \(name) — \(stage)…"
+                    }
+                }
                 await MainActor.run {
                     self.importProgress = nil
                     self.apply(lib, catalog, url: url, keepSelection: keepSelection)
