@@ -179,6 +179,14 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
   14.0 (covers 2018+ Intel Macs). lipo -info echoed in release logs.
   Tests still run natively (ARM) only.
 
+- **2026-08-25** BIG-LIBRARY SCALE (Daniel opened the 68k-photo catalog on an
+  Intel Mac → minutes of beachball): (1) Filmstrip HStack → **LazyHStack**
+  (plain HStack instantiates all 68k thumbnail views!), (2) catalog reads
+  moved OFF the main thread — `openAsync(url:)` (progress capsule, value-type
+  LoadedCatalog built in Task.detached, applied on main; keepSelection when
+  same url) now used by ALL entry points incl. reload() (sync reload after
+  every save also beachballed). Force-quit during open is safe (immutable).
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)

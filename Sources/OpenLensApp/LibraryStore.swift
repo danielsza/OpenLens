@@ -389,16 +389,18 @@ final class LibraryStore: ObservableObject {
     func openLastIfAvailable() -> Bool {
         guard let url = lastLibraryURL,
               FileManager.default.fileExists(atPath: url.path) else { return false }
-        open(url: url)
-        return library != nil
+        openAsync(url: url)
+        return true
     }
 
     /// Closes the current library without quitting the app (returns to the
     /// "no library open" state so the user can open or switch).
     /// Reloads the current library from disk (after a structural change).
+    /// Runs off the main thread — on a 68k-photo catalog a synchronous reload
+    /// beachballed for seconds after every save.
     func reload() {
         ImageCache.shared.removeAll()   // never show pre-edit cached renders
-        if let url = library?.url { open(url: url) }
+        if let url = library?.url { openAsync(url: url) }
     }
 
     private func makeWriter() -> ApertureLibraryWriter? {
@@ -501,29 +503,88 @@ final class LibraryStore: ObservableObject {
         errorMessage = nil
     }
 
+    /// Loaded off the main thread; applied on it. All fields are value types.
+    private struct LoadedCatalog {
+        var projects: [Project] = []
+        var projectTree: [FolderNode] = []
+        var photos: [Photo] = []
+        var userAlbums: [Album] = []
+        var albumPhotos: [String: [Photo]] = [:]
+        var trashed: [Photo] = []
+        var keywordMap: [Int: [String]] = [:]
+    }
+
+    private nonisolated static func loadCatalog(from lib: ApertureLibrary) throws -> LoadedCatalog {
+        var c = LoadedCatalog()
+        c.projects = try lib.projects()
+        c.projectTree = (try? lib.projectNavigator()) ?? []
+        c.photos = try lib.photos()
+        c.userAlbums = (try? lib.userAlbums()) ?? []
+        for album in c.userAlbums {
+            c.albumPhotos[album.id] = (try? lib.photos(inAlbum: album)) ?? []
+        }
+        c.trashed = (try? lib.trashedPhotos()) ?? []
+        c.keywordMap = (try? lib.keywordsByVersion()) ?? [:]
+        return c
+    }
+
+    private func apply(_ lib: ApertureLibrary, _ c: LoadedCatalog, url: URL,
+                       keepSelection: Bool) {
+        let previousSelection = selectedPhotoID
+        library = lib
+        projects = c.projects
+        projectTree = c.projectTree
+        photos = c.photos
+        userAlbums = c.userAlbums
+        albumPhotos = c.albumPhotos
+        trashed = c.trashed
+        keywordMap = c.keywordMap
+        if keepSelection, let prev = previousSelection,
+           c.photos.contains(where: { $0.id == prev }) || c.trashed.contains(where: { $0.id == prev }) {
+            selectedPhotoID = prev
+        } else if !keepSelection {
+            selectedProjectID = c.projects.first?.id
+            selectedAlbumID = nil
+            selectedSource = nil
+        }
+        errorMessage = nil
+        UserDefaults.standard.set(url.path, forKey: lastLibraryKey)
+        rememberLibrary(url)
+    }
+
+    /// Synchronous open — used by reload() on small operations; large
+    /// libraries should come in through openAsync (panels/menus use it).
     func open(url: URL) {
         do {
             let lib = try ApertureLibrary(url: url)
-            self.library = lib
-            self.projects = try lib.projects()
-            self.projectTree = (try? lib.projectNavigator()) ?? []
-            self.photos = try lib.photos()
-            self.userAlbums = (try? lib.userAlbums()) ?? []
-            var map: [String: [Photo]] = [:]
-            for album in userAlbums {
-                map[album.id] = (try? lib.photos(inAlbum: album)) ?? []
-            }
-            self.albumPhotos = map
-            self.trashed = (try? lib.trashedPhotos()) ?? []
-            self.keywordMap = (try? lib.keywordsByVersion()) ?? [:]
-            self.selectedProjectID = projects.first?.id
-            self.selectedAlbumID = nil
-            self.selectedSource = nil
-            self.errorMessage = nil
-            UserDefaults.standard.set(url.path, forKey: lastLibraryKey)
-            rememberLibrary(url)
+            let catalog = try Self.loadCatalog(from: lib)
+            apply(lib, catalog, url: url, keepSelection: library?.url.path == url.path)
         } catch {
             self.errorMessage = "\(error)"
+        }
+    }
+
+    /// Opens without blocking the main thread; shows a progress capsule.
+    /// Essential for big libraries (a 68k-photo catalog beachballed the UI).
+    func openAsync(url: URL) {
+        let name = url.deletingPathExtension().lastPathComponent
+        importProgress = "Opening \(name)…"
+        let keepSelection = library?.url.path == url.path
+        Task.detached(priority: .userInitiated) { [weak self] in
+            do {
+                let lib = try ApertureLibrary(url: url)
+                let catalog = try Self.loadCatalog(from: lib)
+                await MainActor.run {
+                    guard let self else { return }
+                    self.importProgress = nil
+                    self.apply(lib, catalog, url: url, keepSelection: keepSelection)
+                }
+            } catch {
+                await MainActor.run {
+                    self?.importProgress = nil
+                    self?.errorMessage = "\(error)"
+                }
+            }
         }
     }
 
@@ -566,7 +627,7 @@ final class LibraryStore: ObservableObject {
         panel.allowsMultipleSelection = false
         panel.message = "Choose an Aperture library (.aplibrary)"
         if panel.runModal() == .OK, let url = panel.url {
-            open(url: url)
+            openAsync(url: url)
         }
     }
 

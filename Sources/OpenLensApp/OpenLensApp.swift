@@ -174,7 +174,7 @@ struct LibraryCommands: Commands {
                 ForEach(store.knownLibraries, id: \.path) { url in
                     Button(libraryTitle(url)) {
                         ensureWindow()
-                        store.open(url: url)
+                        store.openAsync(url: url)
                     }
                 }
             }

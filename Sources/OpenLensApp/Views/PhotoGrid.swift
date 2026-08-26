@@ -141,7 +141,9 @@ struct Filmstrip: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
+                // LazyHStack is essential: a plain HStack builds EVERY
+                // thumbnail view up front (catastrophic at 68k photos).
+                LazyHStack(spacing: 10) {
                     ForEach(store.visiblePhotos) { photo in
                         PhotoThumbnail(store: store, photo: photo,
                                        size: store.filmstripThumbSize, showCaption: false)

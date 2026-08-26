@@ -109,7 +109,7 @@ struct LibraryChooserView: View {
 
     private func choose(_ url: URL) {
         closeSheetIfNeeded()
-        store.open(url: url)
+        store.openAsync(url: url)
     }
 
     private func closeSheetIfNeeded() {
