@@ -601,10 +601,13 @@ final class LibraryStore: ObservableObject {
                     self.importProgress = "\(name): \(photos.count) photos — loading albums & keywords…"
                 }
                 let albums = (try? lib.userAlbums()) ?? []
-                var map: [String: [Photo]] = [:]
-                for album in albums {
-                    map[album.id] = (try? lib.photos(inAlbum: album)) ?? []
-                }
+                let map: [String: [Photo]] = {
+                    var m: [String: [Photo]] = [:]
+                    for album in albums {
+                        m[album.id] = (try? lib.photos(inAlbum: album)) ?? []
+                    }
+                    return m
+                }()
                 let trashed = (try? lib.trashedPhotos()) ?? []
                 let keywords = (try? lib.keywordsByVersion()) ?? [:]
                 await MainActor.run {
