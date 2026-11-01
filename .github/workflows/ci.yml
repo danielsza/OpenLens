@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - name: Show Swift version
@@ -24,7 +24,7 @@ jobs:
   package:
     # Build release binaries and a runnable .app, and upload them as artifacts.
     needs: build-and-test
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - name: Release build
