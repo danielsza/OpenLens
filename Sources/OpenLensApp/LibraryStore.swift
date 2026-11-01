@@ -330,6 +330,14 @@ final class LibraryStore: ObservableObject {
     @Published var fullScreenMode = false
     /// Non-nil while a long import runs; shown as a progress HUD.
     @Published var importProgress: String?
+    /// 0…1 for determinate work (exports); nil = indeterminate spinner.
+    @Published var progressFraction: Double?
+    /// The cancellable background job behind the progress HUD, if any.
+    @Published var progressTask: Task<Void, Never>?
+
+    func cancelProgressTask() {
+        progressTask?.cancel()
+    }
 
     /// The values currently being edited (shared by the inspector tab and the
     /// HUD so they stay in sync) and their last-saved baseline.

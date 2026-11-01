@@ -198,6 +198,13 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
   (tags < -1 encode percent; ExportSettings.scalePercent overrides pixel cap
   per photo via master pixel size) + test.
 
+- **2026-11-01** Progress HUD v2: moved to TOP of window (Daniel missed it at
+  the bottom), linear determinate bar via store.progressFraction, and a Stop
+  button via store.progressTask (Task.isCancelled checked per photo in export;
+  cancel reports "stopped — N of M exported"). ⌘A fix note: the SYSTEM Edit ▸
+  Select All item shadows same-key custom items — must replace(.pasteboard)
+  and re-provide Cut/Copy/Paste as responder-chain sendAction forwards.
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)

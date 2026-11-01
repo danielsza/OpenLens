@@ -66,16 +66,33 @@ struct ContentView: View {
                 }
             }
         }
-        .overlay(alignment: .bottom) {
+        .overlay(alignment: .top) {
             if let progress = store.importProgress {
-                HStack(spacing: 10) {
-                    ProgressView().controlSize(.small)
-                    Text(progress).font(.caption).lineLimit(1)
+                HStack(spacing: 12) {
+                    if let fraction = store.progressFraction {
+                        ProgressView(value: fraction)
+                            .progressViewStyle(.linear)
+                            .frame(width: 170)
+                    } else {
+                        ProgressView().controlSize(.small)
+                    }
+                    Text(progress).font(.callout).lineLimit(1)
+                    if store.progressTask != nil {
+                        Button {
+                            store.cancelProgressTask()
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Stop")
+                    }
                 }
-                .padding(.horizontal, 16).padding(.vertical, 10)
-                .background(.ultraThinMaterial, in: Capsule())
-                .shadow(radius: 6)
-                .padding(.bottom, 60)
+                .padding(.horizontal, 18).padding(.vertical, 12)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.12)))
+                .shadow(radius: 8)
+                .padding(.top, 54)
             }
         }
     }

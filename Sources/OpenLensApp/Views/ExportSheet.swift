@@ -229,12 +229,15 @@ struct ExportSheet: View {
         let total = targets.count
         let libRef = lib
         store.importProgress = "Exporting 1 of \(total)…"
+        store.progressFraction = 0
         isPresented = false
-        Task.detached(priority: .userInitiated) {
+        store.progressTask = Task.detached(priority: .userInitiated) {
             let exporter = Exporter(library: libRef)
             var failureCount = 0
+            var exported = 0
             var sequencePerFolder: [String: Int] = [:]   // numbering restarts per folder
-            for (index, target) in targets.enumerated() {
+            for target in targets {
+                if Task.isCancelled { break }
                 let sequence = (sequencePerFolder[target.folder.path] ?? 0) + 1
                 sequencePerFolder[target.folder.path] = sequence
                 do {
@@ -243,17 +246,25 @@ struct ExportSheet: View {
                 } catch {
                     failureCount += 1
                 }
-                let done = index + 1
+                exported += 1
+                let done = exported
                 await MainActor.run {
-                    self.store.importProgress = done < total
-                        ? "Exporting \(done + 1) of \(total)…"
-                        : nil
+                    self.store.progressFraction = Double(done) / Double(total)
+                    if done < total {
+                        self.store.importProgress = "Exporting \(done + 1) of \(total)…"
+                    }
                 }
             }
             let failures = failureCount
+            let finished = exported
+            let cancelled = Task.isCancelled
             await MainActor.run {
                 self.store.importProgress = nil
-                if failures > 0 {
+                self.store.progressFraction = nil
+                self.store.progressTask = nil
+                if cancelled && finished < total {
+                    self.store.errorMessage = "Export stopped — \(finished) of \(total) photo(s) were exported."
+                } else if failures > 0 {
                     self.store.errorMessage = "\(failures) of \(total) photo(s) failed to export."
                 }
             }
