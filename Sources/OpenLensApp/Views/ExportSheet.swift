@@ -223,17 +223,40 @@ struct ExportSheet: View {
                 return dest
             }
         }
-        let exporter = Exporter(library: lib)
-        var failureCount = 0
-        // Group by destination folder so sequence numbering restarts per folder.
-        let groups = Dictionary(grouping: photos, by: { folder(for: $0).path })
-        for (_, group) in groups.sorted(by: { $0.key < $1.key }) {
-            let result = exporter.exportBatch(group, to: folder(for: group[0]), settings: settings)
-            failureCount += result.failures.count
-        }
+        // Resolve destinations on the main actor, then render in the
+        // background with live progress (a synchronous loop beachballed).
+        let targets: [(photo: Photo, folder: URL)] = photos.map { ($0, folder(for: $0)) }
+        let total = targets.count
+        let libRef = lib
+        store.importProgress = "Exporting 1 of \(total)…"
         isPresented = false
-        if failureCount > 0 {
-            store.errorMessage = "\(failureCount) of \(photos.count) photo(s) failed to export."
+        Task.detached(priority: .userInitiated) {
+            let exporter = Exporter(library: libRef)
+            var failureCount = 0
+            var sequencePerFolder: [String: Int] = [:]   // numbering restarts per folder
+            for (index, target) in targets.enumerated() {
+                let sequence = (sequencePerFolder[target.folder.path] ?? 0) + 1
+                sequencePerFolder[target.folder.path] = sequence
+                do {
+                    _ = try exporter.export(target.photo, to: target.folder,
+                                            settings: settings, sequenceIndex: sequence)
+                } catch {
+                    failureCount += 1
+                }
+                let done = index + 1
+                await MainActor.run {
+                    self.store.importProgress = done < total
+                        ? "Exporting \(done + 1) of \(total)…"
+                        : nil
+                }
+            }
+            let failures = failureCount
+            await MainActor.run {
+                self.store.importProgress = nil
+                if failures > 0 {
+                    self.store.errorMessage = "\(failures) of \(total) photo(s) failed to export."
+                }
+            }
         }
     }
 
