@@ -65,11 +65,27 @@ struct OpenLensApp: App {
                     NotificationCenter.default.post(name: .backupRequested, object: nil)
                 }
             }
-            CommandGroup(after: .pasteboard) {
+            // Replace the standard clipboard group: the system's own
+            // "Select All" (⌘A) item otherwise shadows ours and the key
+            // never reaches the photo browser. Cut/Copy/Paste are re-provided
+            // as responder-chain forwards so text fields keep working.
+            CommandGroup(replacing: .pasteboard) {
+                Button("Cut") {
+                    NSApp.sendAction(#selector(NSText.cut(_:)), to: nil, from: nil)
+                }
+                .keyboardShortcut("x")
+                Button("Copy") {
+                    NSApp.sendAction(#selector(NSText.copy(_:)), to: nil, from: nil)
+                }
+                .keyboardShortcut("c")
+                Button("Paste") {
+                    NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: nil)
+                }
+                .keyboardShortcut("v")
                 Divider()
-                Button("Select All Photos") {
-                    // When a text field has focus, ⌘A should keep meaning
-                    // "select all text" — forward to the responder chain.
+                Button("Select All") {
+                    // In a text field, ⌘A keeps meaning "select all text";
+                    // anywhere else it selects every photo in the browser.
                     if let responder = NSApp.keyWindow?.firstResponder,
                        responder is NSTextView {
                         NSApp.sendAction(#selector(NSText.selectAll(_:)), to: responder, from: nil)
