@@ -65,6 +65,22 @@ struct OpenLensApp: App {
                     NotificationCenter.default.post(name: .backupRequested, object: nil)
                 }
             }
+            CommandGroup(after: .pasteboard) {
+                Divider()
+                Button("Select All Photos") {
+                    // When a text field has focus, ⌘A should keep meaning
+                    // "select all text" — forward to the responder chain.
+                    if let responder = NSApp.keyWindow?.firstResponder,
+                       responder is NSTextView {
+                        NSApp.sendAction(#selector(NSText.selectAll(_:)), to: responder, from: nil)
+                    } else {
+                        store.selectAllVisible()
+                    }
+                }
+                .keyboardShortcut("a")
+                Button("Deselect All") { store.deselectAll() }
+                    .keyboardShortcut("a", modifiers: [.command, .shift])
+            }
             // Append to the system View menu (a CommandMenu("View") would
             // create a duplicate second "View" menu).
             CommandGroup(after: .sidebar) {

@@ -192,6 +192,12 @@ Remote access: `ssh -i ~/.ssh/openlens_key macserver@192.168.0.129`, library at
   state shows a LOADING panel instead of the Choose Library dialog while
   importProgress non-nil (chooser was appearing mid-load).
 
+- **2026-11-01** Select All Photos ⌘A / Deselect All ⇧⌘A (Edit menu; ⌘A
+  forwards to NSText.selectAll when a text field has focus so search typing
+  keeps native behaviour). Export "Scale %": Size picker gains 75/50/25%
+  (tags < -1 encode percent; ExportSettings.scalePercent overrides pixel cap
+  per photo via master pixel size) + test.
+
 ## Hard-won crash lesson (2026-07-24, v0.1.5 SIGSEGV in the wild)
 A shared `sqlite3*` connection used concurrently from the main thread (UI
 reads) and background image loaders (`ImageCache.fullImage → olAdjustments`)

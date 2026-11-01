@@ -33,7 +33,9 @@ struct ExportSheet: View {
         Binding(get: { Watermark.Position(rawValue: positionRaw) ?? .bottomCenter },
                 set: { positionRaw = $0.rawValue })
     }
-    private var effectiveMaxEdge: Int { maxEdge == -1 ? max(1, customEdge) : maxEdge }
+    private var effectiveMaxEdge: Int { maxEdge == -1 ? max(1, customEdge) : max(0, maxEdge) }
+    /// Size-picker tags below -1 encode percent-of-original (e.g. -50 = 50%).
+    private var scalePercent: Double { maxEdge < -1 ? Double(-maxEdge) : 0 }
     private var logoURL: URL? { logoPath.isEmpty ? nil : URL(fileURLWithPath: logoPath) }
 
     private var selectionCount: Int {
@@ -56,6 +58,9 @@ struct ExportSheet: View {
                 if format != .originals {
                     Picker("Size", selection: $maxEdge) {
                         Text("Full size").tag(0)
+                        Text("75%").tag(-75)
+                        Text("50%").tag(-50)
+                        Text("25%").tag(-25)
                         Text("4096 px").tag(4096)
                         Text("2048 px").tag(2048)
                         Text("1024 px").tag(1024)
@@ -200,7 +205,8 @@ struct ExportSheet: View {
             dpi: Double(dpiText.trimmingCharacters(in: .whitespaces)), watermark: watermark,
             fileNameSuffix: nameSuffix.trimmingCharacters(in: .whitespaces),
             customName: customName.trimmingCharacters(in: .whitespaces),
-            preserveMetadata: preserveMetadata)
+            preserveMetadata: preserveMetadata,
+            scalePercent: scalePercent)
 
         // Optional subfolder (Aperture's "Subfolder Format"): per-project or a
         // fixed custom name inside the chosen destination.

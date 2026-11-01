@@ -10,6 +10,9 @@ public struct ExportSettings {
     public var format: Format = .jpeg
     /// Long-edge cap in pixels; 0 = full resolution.
     public var maxPixelSize: Int = 0
+    /// Percent of the original size (Aperture's "Scale"); 0 = disabled.
+    /// When set (1…100) it overrides `maxPixelSize`, per photo.
+    public var scalePercent: Double = 0
     public var jpegQuality: Double = 0.9
     /// Optional DPI written into the file metadata.
     public var dpi: Double?
@@ -24,7 +27,8 @@ public struct ExportSettings {
 
     public init(format: Format = .jpeg, maxPixelSize: Int = 0, jpegQuality: Double = 0.9,
                 dpi: Double? = nil, watermark: Watermark? = nil, fileNameSuffix: String = "",
-                customName: String = "", preserveMetadata: Bool = true) {
+                customName: String = "", preserveMetadata: Bool = true,
+                scalePercent: Double = 0) {
         self.format = format
         self.maxPixelSize = maxPixelSize
         self.jpegQuality = jpegQuality
@@ -33,6 +37,7 @@ public struct ExportSettings {
         self.fileNameSuffix = fileNameSuffix
         self.customName = customName
         self.preserveMetadata = preserveMetadata
+        self.scalePercent = scalePercent
     }
 
     /// The output base name for the photo at `index` (1-based) in the batch.
@@ -115,11 +120,22 @@ public extension Exporter {
         }
 
         let src = library.masterFileURL(for: photo.master)
+        // Percent-of-original scaling computes a per-photo pixel cap.
+        var pixelCap = settings.maxPixelSize
+        if settings.scalePercent > 0 {
+            let size = ImageLoader.pixelSize(at: src)
+                ?? CGSize(width: photo.version.masterWidth ?? 0,
+                          height: photo.version.masterHeight ?? 0)
+            let longEdge = max(size.width, size.height)
+            if longEdge > 0 {
+                pixelCap = max(1, Int((longEdge * CGFloat(settings.scalePercent) / 100).rounded()))
+            }
+        }
         let base: CGImage?
-        if settings.maxPixelSize <= 0 {
+        if pixelCap <= 0 {
             base = ImageLoader.fullCGImage(at: src)
         } else {
-            base = ImageLoader.cgImage(at: src, maxPixelSize: settings.maxPixelSize)
+            base = ImageLoader.cgImage(at: src, maxPixelSize: pixelCap)
         }
         guard var cg = base else { throw ExportError.decodeFailed(photo.version.name) }
         if let params = library.olAdjustments(for: photo) {

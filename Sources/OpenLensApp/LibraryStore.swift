@@ -257,6 +257,28 @@ final class LibraryStore: ObservableObject {
         selectedPhotoIDs.contains(id) || (selectedPhotoIDs.isEmpty && id == selectedPhotoID)
     }
 
+    /// Selects every photo in the current view (⌘A).
+    func selectAllVisible() {
+        let photos = visiblePhotos
+        guard !photos.isEmpty else { return }
+        selectedPhotoIDs = Set(photos.map(\.id))
+        if selectedPhotoID == nil || !selectedPhotoIDs.contains(selectedPhotoID!) {
+            selectedPhotoID = photos.first?.id
+        }
+        syncEditParams()
+    }
+
+    /// Clears the selection (⇧⌘A).
+    func deselectAll() {
+        selectedPhotoIDs = []
+        selectedPhotoID = nil
+        liveAdjustments = nil
+        liveLayers = nil
+        brushMode = false
+        cropMode = false
+        syncEditParams()
+    }
+
     /// Handles a thumbnail click with optional Command (toggle) / Shift (range).
     func handleTap(_ photo: Photo, command: Bool, shift: Bool) {
         viewerFocused = false          // thumbnail interaction: slider sizes thumbs

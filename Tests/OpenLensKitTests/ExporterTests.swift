@@ -65,6 +65,15 @@ final class ExporterTests: XCTestCase {
         XCTAssertEqual(heic.pathExtension, "heic")
         XCTAssertTrue(ImageLoader.canDecode(heic))
 
+        // 50% of original (percent overrides pixel cap).
+        let src = lib.masterFileURL(for: photo.master)
+        let original = try XCTUnwrap(ImageLoader.pixelSize(at: src))
+        let half = try exporter.export(photo, to: dir,
+            settings: ExportSettings(format: .jpeg, maxPixelSize: 0, scalePercent: 50))
+        let halfSize = try XCTUnwrap(ImageLoader.pixelSize(at: half))
+        let expected = (max(original.width, original.height) / 2).rounded()
+        XCTAssertEqual(max(halfSize.width, halfSize.height), expected, accuracy: 2)
+
         // JPEG with a text watermark + DPI.
         let jpg = try exporter.export(photo, to: dir,
             settings: ExportSettings(format: .jpeg, maxPixelSize: 200, jpegQuality: 0.8,
